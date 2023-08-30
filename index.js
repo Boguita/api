@@ -12,8 +12,6 @@ import { dirname, join } from "path";
 
 const app = express();
 const port = process.env.PORT || 8800;
-app.use(express.json());
-app.use(cookieParser());
 
 
 app.use(
@@ -41,6 +39,8 @@ app.options("/api/auth/*", cors());
 app.options("/api/users/*", cors());
 app.options("/api/tasks/*", cors());
 app.options("/api/uploads/*", cors());
+app.use(express.json());
+app.use(cookieParser());
 
 
 // Obtiene la ruta del archivo actual (index.js)
