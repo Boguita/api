@@ -22,18 +22,18 @@ app.use(
   })
 );
 
-app.set("trust proxy", 1);
-app.use(
-  session({
-    secret: "overtherainbow123",
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-      secure: true,
-      sameSite: "none",
-    },
-  })
-);
+// app.set("trust proxy", 1);
+// app.use(
+//   session({
+//     secret: "overtherainbow123",
+//     resave: false,
+//     saveUninitialized: true,
+//     cookie: {
+//       secure: true,
+//       sameSite: "none",
+//     },
+//   })
+// );
 
 
 app.use((req, res, next) => {
@@ -49,10 +49,34 @@ app.use((req, res, next) => {
   next();
 });
 
-app.options("/api/auth/*", cors());
-app.options("/api/users/*", cors());
-app.options("/api/tasks/*", cors());
-app.options("/api/uploads/*", cors());
+app.options(
+  "/api/auth/*",
+  cors({
+    origin: ["https://client-zeta-weld.vercel.app"],
+    credentials: true,
+  })
+);
+app.options(
+  "/api/users/*",
+  cors({
+    origin: ["https://client-zeta-weld.vercel.app"],
+    credentials: true,
+  })
+);
+app.options(
+  "/api/tasks/*",
+  cors({
+    origin: ["https://client-zeta-weld.vercel.app"],
+    credentials: true,
+  })
+);
+app.options(
+  "/api/uploads/*",
+  cors({
+    origin: ["https://client-zeta-weld.vercel.app"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
