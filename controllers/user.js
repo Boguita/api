@@ -79,12 +79,14 @@ export const comprobarAfiliados = (req, res) => {
 };
 
 export const getAfiliado = (req, res) => {
-  const token = req.cookies.access_token;
-  console.log(token);
-  if (!token) return res.status(401).json("Not authenticated!");
+    const token = req.cookies.access_token;
+console.log(token);
+if (!token) return res.status(401).json("Not authenticated!");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
+jwt.verify(token, "overtherainbow123", (err, userInfo) => {
+  if (err) return res.status(403).json("Token is not valid!");
+  // Tu lógica después de verificar el token
+
 
     const dni = req.params.dni; // Obtener el DNI de los parámetros de la solicitud
     const query = `
@@ -156,11 +158,13 @@ export const getAfiliado = (req, res) => {
 
 export const registerAfiliate = (req, res) => {
   const token = req.cookies.access_token;
-  console.log(token);
-  if (!token) return res.status(401).json("Not authenticated!");
+console.log(token);
+if (!token) return res.status(401).json("Not authenticated!");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
+jwt.verify(token, "overtherainbow123", (err, userInfo) => {
+  if (err) return res.status(403).json("Token is not valid!");
+  // Tu lógica después de verificar el token
+
 
     const {
       name,
