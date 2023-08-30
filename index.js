@@ -14,12 +14,28 @@ import { dirname, join } from "path";
 const app = express();
 const port = process.env.PORT || 8800;
 
-
+const corsOptions = {
+  origin: [`https://client-zeta-weld.vercel.app`],
+  methods: "GET,HEAD,PUT,OPTIONS,POST,DELETE",
+  allowedHeaders: [
+    "Access-Control-Allow-Headers",
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "token",
+    "access_token",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
+    "Access-Control-Allow-Credentials",
+  ],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
 app.use(
-  cors({
-    origin: ["https://client-zeta-weld.vercel.app"],
-    credentials: true,
-  })
+  cors(corsOptions)
 );
 
 // app.set("trust proxy", 1);
@@ -36,18 +52,18 @@ app.use(
 // );
 
 
-app.use((req, res, next) => {
+// app.use((req, res, next) => {
   
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  // Otras cabeceras CORS si es necesario
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
+//   res.setHeader("Access-Control-Allow-Credentials", "true");
+//   // Otras cabeceras CORS si es necesario
+//   res.setHeader(
+//     "Access-Control-Allow-Headers",
+//     "Origin, X-Requested-With, Content-Type, Accept"
+//   );
 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  next();
-});
+//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+//   next();
+// });
 
 app.options(
   "/api/auth/*",
