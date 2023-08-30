@@ -50,6 +50,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/tasks", postRoutes);
 app.use("/uploads", express.static(uploadsDirectory));
 app.use("/api/uploads", uploadRoutes );
+app.use(middlewares.notFound);
+app.use(middlewares.errorHandler);
+
 
 app.listen(port, () => {
   console.log("Connected!");
