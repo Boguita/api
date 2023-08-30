@@ -10,7 +10,7 @@
     
       { "src": "/api/auth", "dest": "api/auth.js" },
       { "src": "/api/users", "dest": "api/users.js" },
-      { "src": "/api/posts", "dest": "api/posts.js" },
+      { "src": "/api/tasks", "dest": "api/posts.js" },
       { "src": "/api/uploads", "dest": "api/uploads.js" }
     
   ]
