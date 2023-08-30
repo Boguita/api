@@ -48,7 +48,7 @@ export const getAllAfiliados = (req, res) => {
 
 export const comprobarAfiliados = (req, res) => {
   // const token = req.cookies.access_token;
-  // const dni = req.params.dni;
+  const dni = req.params.dni;
 
   
   // if (!token) return res.status(401).json("No autenticado");
