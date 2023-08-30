@@ -1,14 +1,9 @@
 import express from "express";
 import {
-  addPost,
   comprobarBeneficios,
-  deletePost,
-  getAll,
   getBeneficiosByDni,
-  getPost,
   getPosts,
   otorgarBeneficio,
-  updatePost,
 } from "../controllers/post.js";
 
 const router = express.Router();
