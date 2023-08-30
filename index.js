@@ -8,6 +8,7 @@ import cors from "cors";
 import multer from "multer";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import * as middlewares from "./middlewares.js";
 
 const app = express();
 app.use(express.json());
