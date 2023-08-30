@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 
 export const getBeneficiosByDni = (req, res) => {
-   console.log("Handling request:", req.method, req.url);
+   
   const dni = req.params.dni;
 
   const query = `

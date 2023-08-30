@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 
 
 export const getUsers = (req, res) => {
-   console.log("Handling request:", req.method, req.url);
+   
   const uid = req.params.id; // Obtener el uid de los parámetros de la solicitud
   const q = "SELECT * FROM users WHERE id = ?";
 
@@ -29,7 +29,7 @@ export const updateUsers = (req, res) => {
 }
 
 export const getAllAfiliados = (req, res) => {
-   console.log("Handling request:", req.method, req.url);
+   
   const token = req.cookies.access_token;
   console.log(token);
   if (!token) return res.status(401).json("Not authenticated!");
