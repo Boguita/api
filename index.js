@@ -15,7 +15,7 @@ const app = express();
 const port = process.env.PORT || 8800;
 
 const corsOptions = {
-  origin: [`https://client-zeta-weld.vercel.app`],
+  origin: [`https://fancy-caramel-9e3c4d.netlify.app`],
   methods: "GET,HEAD,PUT,OPTIONS,POST,DELETE",
   allowedHeaders: [
     "Access-Control-Allow-Headers",
@@ -68,28 +68,28 @@ app.use(
 app.options(
   "/api/auth/*",
   cors({
-    origin: ["https://client-zeta-weld.vercel.app"],
+    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/users/*",
   cors({
-    origin: ["https://client-zeta-weld.vercel.app"],
+    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/tasks/*",
   cors({
-    origin: ["https://client-zeta-weld.vercel.app"],
+    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/uploads/*",
   cors({
-    origin: ["https://client-zeta-weld.vercel.app"],
+    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
     credentials: true,
   })
 );
