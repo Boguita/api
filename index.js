@@ -12,7 +12,7 @@ import { dirname, join } from "path";
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
-const port = procces.env.PORT || 8800;
+const port = process.env.PORT || 8800;
 
 app.use(
   cors({
