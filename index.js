@@ -8,7 +8,7 @@ import cors from "cors";
 import multer from "multer";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import * as middlewares from "./middlewares.js";
+
 
 const app = express();
 app.use(express.json());
@@ -51,8 +51,8 @@ app.use("/api/users", userRoutes);
 app.use("/api/tasks", postRoutes);
 app.use("/uploads", express.static(uploadsDirectory));
 app.use("/api/uploads", uploadRoutes );
-app.use(middlewares.notFound);
-app.use(middlewares.errorHandler);
+// app.use(middlewares.notFound);
+// app.use(middlewares.errorHandler);
 
 
 app.listen(port, () => {
