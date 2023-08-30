@@ -25,7 +25,7 @@ app.use(
 app.set("trust proxy", 1);
 app.use(
   session({
-    secret: process.env.JWT_SECRET,
+    secret: "overtherainbow123",
     resave: false,
     saveUninitialized: true,
     cookie: {
