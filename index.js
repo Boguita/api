@@ -46,11 +46,15 @@ const uploadsDirectory = join(__dirname, "uploads");
 // app.use("/", (req, res) => {
 //   res.send("Hello World!");
 // });
-  
+console.log("Configuring auth routes..."); 
 app.use("/api/auth", authRoutes);
+console.log("Configuring auth routes...");
 app.use("/api/users", userRoutes);
+console.log("Configuring auth routes...");
 app.use("/api/tasks", postRoutes);
+console.log("Configuring auth routes...");
 app.use("/uploads", express.static(uploadsDirectory));
+console.log("Configuring auth routes...");
 app.use("/api/uploads", uploadRoutes );
 // app.use(middlewares.notFound);
 // app.use(middlewares.errorHandler);
