@@ -1,4 +1,5 @@
 import express from "express";
+import session from "express-session";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
@@ -18,6 +19,19 @@ app.use(
   cors({
     origin: ["https://client-zeta-weld.vercel.app"],
     credentials: true,
+  })
+);
+
+app.set("trust proxy", 1);
+app.use(
+  session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+      secure: true,
+      sameSite: "none",
+    },
   })
 );
 
