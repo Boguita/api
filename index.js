@@ -17,7 +17,7 @@ const port = process.env.PORT || 8800;
 
 app.use(
   cors({
-  origin: "http://localhost:5173",
+  
   credentials: true,
 }));
 
@@ -55,6 +55,6 @@ app.use("/api/uploads", uploadRoutes );
 // app.use(middlewares.errorHandler);
 
 
-app.listen(port, () => {
-  console.log("Connected!");
-});
+// app.listen(port, () => {
+//   console.log("Connected!");
+// });
