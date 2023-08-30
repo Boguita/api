@@ -63,3 +63,5 @@ app.use("/api/uploads", uploadRoutes );
 app.listen(port, () => {
   console.log("Connected!");
 });
+
+export default app;
