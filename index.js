@@ -18,9 +18,10 @@ app.use(cookieParser());
 
 app.use(
   cors({
-  
-  credentials: true,
-}));
+    origin: ["https://client-zeta-weld.vercel.app"],
+    credentials: true,
+  })
+);
 app.options("*", cors());
 
 app.use((req, res, next) => {
