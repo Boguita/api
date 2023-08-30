@@ -11,9 +11,10 @@ import { dirname, join } from "path";
 
 
 const app = express();
+const port = process.env.PORT || 8800;
 app.use(express.json());
 app.use(cookieParser());
-const port = process.env.PORT || 8800;
+
 
 app.use(
   cors({
@@ -55,6 +56,6 @@ app.use("/api/uploads", uploadRoutes );
 // app.use(middlewares.errorHandler);
 
 
-// app.listen(port, () => {
-//   console.log("Connected!");
-// });
+app.listen(port, () => {
+  console.log("Connected!");
+});
