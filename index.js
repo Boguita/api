@@ -42,9 +42,9 @@ const __dirname = dirname(__filename);
 // Construye la ruta para el directorio "uploads" a partir de la ruta actual
 const uploadsDirectory = join(__dirname, "uploads");
 
-app.use("/", (req, res) => {
-  res.send("Hello World!");
-});
+// app.use("/", (req, res) => {
+//   res.send("Hello World!");
+// });
   
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
