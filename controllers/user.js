@@ -47,14 +47,14 @@ export const getAllAfiliados = (req, res) => {
 };
 
 export const comprobarAfiliados = (req, res) => {
-  const token = req.cookies.access_token;
-  const dni = req.params.dni;
+  // const token = req.cookies.access_token;
+  // const dni = req.params.dni;
 
   
-  if (!token) return res.status(401).json("No autenticado");
+  // if (!token) return res.status(401).json("No autenticado");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Su sesión ha expirado");
+  // jwt.verify(token, "jwtkey", (err, userInfo) => {
+  //   if (err) return res.status(403).json("Su sesión ha expirado");
 
     const q = "SELECT * FROM afiliados WHERE afiliados.dni = ?";
     db.query(q, [dni], (err, data) => {
@@ -75,16 +75,16 @@ export const comprobarAfiliados = (req, res) => {
           .json({ message: "No existe un afiliado con ese DNI" });
       }
     });
-  });
+  // });
 };
 
 export const getAfiliado = (req, res) => {
-  const token = req.cookies.access_token;
-  console.log(token);
-  if (!token) return res.status(401).json("Not authenticated!");
+  // const token = req.cookies.access_token;
+  // console.log(token);
+  // if (!token) return res.status(401).json("Not authenticated!");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
+  // jwt.verify(token, "jwtkey", (err, userInfo) => {
+  //   if (err) return res.status(403).json("Token is not valid!");
 
     const dni = req.params.dni; // Obtener el DNI de los parámetros de la solicitud
     const query = `
@@ -149,18 +149,18 @@ export const getAfiliado = (req, res) => {
 
       return res.status(200).json(afiliadoData);
     });
-  });
+  // });
 };
 
 
 
 export const registerAfiliate = (req, res) => {
-  const token = req.cookies.access_token;
-  console.log(token);
-  if (!token) return res.status(401).json("Not authenticated!");
+  // const token = req.cookies.access_token;
+  // console.log(token);
+  // if (!token) return res.status(401).json("Not authenticated!");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
+  // jwt.verify(token, "jwtkey", (err, userInfo) => {
+  //   if (err) return res.status(403).json("Token is not valid!");
 
     const {
       name,
@@ -233,16 +233,16 @@ export const registerAfiliate = (req, res) => {
         }
       );
     });
-  });
+  // });
 };
 
 export const registerFamiliar = (req, res) => {
-  const token = req.cookies.access_token;
+  // const token = req.cookies.access_token;
 
-  if (!token) return res.status(401).json("Not authenticated!");
+  // if (!token) return res.status(401).json("Not authenticated!");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
+  // jwt.verify(token, "jwtkey", (err, userInfo) => {
+  //   if (err) return res.status(403).json("Token is not valid!");
  
     console.log(req.body);
     const {
@@ -298,7 +298,7 @@ export const registerFamiliar = (req, res) => {
         });
       }
     );
-  });
+  // });
 };
 
 

@@ -46,11 +46,11 @@ export const getBeneficiosByDni = (req, res) => {
 };
 
 export const comprobarBeneficios = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) return res.status(401).json("No autenticado");
+  // const token = req.cookies.access_token;
+  // if (!token) return res.status(401).json("No autenticado");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token no válido");
+  // jwt.verify(token, "jwtkey", (err, userInfo) => {
+  //   if (err) return res.status(403).json("Token no válido");
 
     const familiarIds = req.params.familiar_ids.split(",").map(Number); // Cambiamos a req.query para obtener los parámetros de consulta
     console.log(familiarIds);
@@ -91,19 +91,19 @@ export const comprobarBeneficios = (req, res) => {
 
       return res.status(200).json(results);
     });
-  });
+  // });
 };
 
 export const otorgarBeneficio = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) {
-    return res.status(401).json("No autenticado");
-  }
+  // // const token = req.cookies.access_token;
+  // // if (!token) {
+  // //   return res.status(401).json("No autenticado");
+  // // }
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) {
-      return res.status(403).json("Token no válido");
-    }
+  // jwt.verify(token, "jwtkey", (err, userInfo) => {
+  //   if (err) {
+  //     return res.status(403).json("Token no válido");
+  //   }
 
     const beneficiosData = req.body;
     const beneficiosKeys = Object.keys(beneficiosData);
@@ -332,7 +332,7 @@ export const otorgarBeneficio = (req, res) => {
 
       insertBeneficio(0);
     });
-  });
+  // });
 };
 
 
