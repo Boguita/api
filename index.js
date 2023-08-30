@@ -22,7 +22,10 @@ app.use(
     credentials: true,
   })
 );
-
+app.options("/api/auth/*", cors());
+app.options("/api/users/*", cors());
+app.options("/api/tasks/*", cors());
+app.options("/api/uploads/*", cors());
 
 app.use((req, res, next) => {
   
