@@ -17,7 +17,7 @@ const sendMail = async (email, mailSubject, content) => {
 
     const mailOptions = {
         from: `UATRE BENEFICIOS <${SMTP_MAIL}>`,
-        to: email.join(','),
+        to: email,
         subject: mailSubject,
         html: content
     }

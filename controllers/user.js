@@ -1,7 +1,7 @@
 import { db } from "../db.js";
 import sendMail from "./send-mail.js";
 import jwt from "jsonwebtoken";
-
+import bcrypt from "bcryptjs";
 
 
 export const getUsers = (req, res) => {
@@ -17,16 +17,77 @@ export const getUsers = (req, res) => {
 };
 
 export const updateUsers = (req, res) => {
-  const uid = req.params.id; // Obtener el uid de los parámetros de la solicitud
-  const {seccional, email, tel, domicilio} = req.body;
-  const q = "UPDATE users SET seccional = ?, email = ?, tel = ?, domicilio = ? WHERE id = ?";
+  const uid = req.body.id;
+  const password = req.body.password;
+  const repeat_password = req.body.repeat_password;
 
-  db.query(q, [seccional, email, tel, domicilio, uid], (err, data) => {
-    if (err) return res.status(500).json(err);
+  if (password === repeat_password) {
+    if (password) {
+      // Si se proporciona una nueva contraseña, generamos un hash
+      const salt = bcrypt.genSaltSync(10);
+      const hash = bcrypt.hashSync(password, salt);
+      const updateUser = {
+        email: req.body.email,
+        provincia: req.body.provincia,
+        ciudad: req.body.ciudad,
+        domicilio: req.body.domicilio,
+        tel: req.body.tel,
+        password: hash,
+      };
 
-    return res.status(200).json(data);
-  });
-}
+      const q =
+        "UPDATE users SET email = ?, tel = ?, domicilio = ?, provincia = ?, ciudad = ?, password = ? WHERE id = ?";
+      db.query(
+        q,
+        [
+          updateUser.email,
+          updateUser.tel,
+          updateUser.domicilio,
+          updateUser.provincia,
+          updateUser.ciudad,
+          updateUser.password,
+          uid,
+        ],
+        (err, data) => {
+          if (err) return res.status(500).json(err);
+
+          return res.status(200).json(data);
+        }
+      );
+    } else {
+      // Si no se proporciona una nueva contraseña, excluimos el campo de contraseña de la actualización
+      const updateUser = {
+        email: req.body.email,
+        provincia: req.body.provincia,
+        ciudad: req.body.ciudad,
+        domicilio: req.body.domicilio,
+        tel: req.body.tel,
+      };
+
+      const q =
+        "UPDATE users SET email = ?, tel = ?, domicilio = ?, provincia = ?, ciudad = ? WHERE id = ?";
+      db.query(
+        q,
+        [
+          updateUser.email,
+          updateUser.tel,
+          updateUser.domicilio,
+          updateUser.provincia,
+          updateUser.ciudad,
+          uid,
+        ],
+        (err, data) => {
+          if (err) return res.status(500).json(err);
+
+          return res.status(200).json(data);
+        }
+      );
+    }
+  } else {
+    return res.status(409).json("Las contraseñas no coinciden.");
+  }
+};
+
 
 export const getAllAfiliados = (req, res) => {
    
@@ -103,11 +164,30 @@ export const getAfiliado = (req, res) => {
         afiliados.datos_empleador AS afiliado_datos_empleador, -- Nueva columna para los datos del empleador
         afiliados.dni_img AS afiliado_dni_img,         -- Nueva columna para la ruta de la imagen DNI
         afiliados.recibo_sueldo AS afiliado_recibo_sueldo, -- Nueva columna para la ruta del recibo de sueldo
-        CONCAT('[', GROUP_CONCAT(
-          CONCAT(
-            '{"name":"', familiares.name, '","dni":"', familiares.dni, '", "fecha_de_nacimiento":"', familiares.fecha_de_nacimiento, '", "tel":"', familiares.tel, '", "categoria":"', familiares.categoria, '", "id":"', familiares.idfamiliares,'"}'
-          )
-        ), ']') AS familiares_data
+        afiliados.provincia AS afiliado_provincia,
+        afiliados.ciudad AS afiliado_ciudad,
+CONCAT(
+  '[',
+  GROUP_CONCAT(
+    JSON_OBJECT(
+      'name', familiares.name,
+      'dni', familiares.dni,
+      'fecha_de_nacimiento', familiares.fecha_de_nacimiento,
+      'tel', familiares.tel,
+      'categoria', familiares.categoria,
+      'id', familiares.idfamiliares,
+      'dni_img', IFNULL(familiares.dni_img, 'null'),
+      'libreta_img', IFNULL(familiares.libreta_img, 'null')
+    )
+  ),
+  ']'
+) AS familiares_data
+
+
+
+
+
+
       FROM
         afiliados
       LEFT JOIN
@@ -128,7 +208,7 @@ export const getAfiliado = (req, res) => {
           .status(404)
           .json({ message: "No se encontró ningún afiliado con ese DNI" });
       }
-      console.log(results)
+      console.log(results[0].familiares_data)
       const afiliadoData = {
         idafiliados: results[0].idafiliados,
         name: results[0].afiliado_name,
@@ -141,10 +221,32 @@ export const getAfiliado = (req, res) => {
         cuit: results[0].afiliado_cuit,
         domicilio: results[0].afiliado_domicilio,
         correo: results[0].afiliado_correo,
-        datos_empleador: JSON.parse(results[0].afiliado_datos_empleador), // Convertir el array JSON de datos del empleador
-        dni_img: JSON.parse(results[0].afiliado_dni_img), // Convertir el array JSON de rutas de imagen
-        recibo_sueldo: JSON.parse(results[0].afiliado_recibo_sueldo), // Convertir el array JSON de rutas de recibo
-        familiares: JSON.parse(results[0].familiares_data),
+        provincia: results[0].afiliado_provincia,
+        ciudad: results[0].afiliado_ciudad,
+        datos_empleador: results[0].afiliado_datos_empleador
+          ? JSON.parse(results[0].afiliado_datos_empleador)
+          : null,
+
+        dni_img: results[0].afiliado_dni_img
+          ? JSON.parse(results[0].afiliado_dni_img)
+          : null,
+
+        recibo_sueldo: results[0].afiliado_recibo_sueldo
+          ? JSON.parse(results[0].afiliado_recibo_sueldo)
+          : null,
+
+        familiares: results[0].familiares_data
+          ? JSON.parse(results[0].familiares_data).map((familiar) => ({
+              name: familiar.name || "",
+              dni: familiar.dni || "",
+              fecha_de_nacimiento: familiar.fecha_de_nacimiento || "",
+              tel: familiar.tel || "",
+              categoria: familiar.categoria || "",
+              id: familiar.id || "",
+              libreta_img: familiar.libreta_img ? JSON.parse(familiar.libreta_img) : [],
+              dni_img: familiar.dni_img ? JSON.parse(familiar.dni_img) : [],
+            }))
+          : [],
       };
 
       return res.status(200).json(afiliadoData);
@@ -248,7 +350,6 @@ export const registerFamiliar = (req, res) => {
     const {
       name,
       dni,
-      dni_img,
       tel,
       libreta_img,
       fecha_de_nacimiento,
@@ -269,17 +370,15 @@ export const registerFamiliar = (req, res) => {
     }
 
     const insertQuery = `
-      INSERT INTO familiares (name, dni, dni_img, tel, libreta_img, fecha_de_nacimiento, categoria, id_afiliado)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO familiares (name, dni, tel, fecha_de_nacimiento, categoria, id_afiliado)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
     db.query(
       insertQuery,
       [
         name,
         dni,
-        dni_img,
         tel,
-        libreta_img,
         fecha_de_nacimiento,
         categoria,
         id_afiliado,
@@ -404,6 +503,38 @@ export const approveUser = (req, res) => {
     });
   });
 };
+
+export const soporte = (req, res) => {
+  console.log(req.body);
+  const {email, name, dni, seguimiento, type, benefit, message} = req.body;
+  
+  const emailAdmin = ["heberdgomez@hotmail.com"];
+  const contentAdmin = `<h1>¡Se ha registrado una nueva consulta! </h1> <p><strong>DATOS DEL FORMULARIO:</strong>
+    <br/> EMAIL: ${email} <br/>
+    NOMBRE: ${name} <br/>
+    DNI: ${dni} <br/>
+    N° SEGUIMIENTO DEL BENEFICIO: ${seguimiento} <br/>
+    TIPO DE CONSULTA: ${type} <br/>
+    BENEFICIO: ${benefit} <br/>
+    MENSAJE: ${message} <br/>    
+    </p>`;
+  const subjectAdmin = "NUEVA CONSULTA en UATRE BENEFICIOS";
+
+  const contentUser = `<h1>¡Hola ${name}, tu mensaje ha sido recibido por nuestro equipo y estamos trabajando para responderte lo antes posible!</h1> <p>Te pido por favor aguardes la misma. Muchas gracias por contactarte.</p>`;
+  const subjectUser = "ESTADO DE TU CONSULTA";
+
+  try {
+    // Intenta enviar correos electrónicos
+    sendMail(emailAdmin, subjectAdmin, contentAdmin);
+    sendMail(email, subjectUser, contentUser);
+
+    return res.status(200).json("La consulta ha sido enviada con éxito.");
+  } catch (error) {
+    // Si hay un error al enviar correos electrónicos, responde con un error
+    return res.status(500).json("Hubo un error al enviar la consulta.");
+  }
+};
+
 
 export const deleteUser = (req, res) => {
   const username = req.body.username;

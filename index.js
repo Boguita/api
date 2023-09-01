@@ -15,7 +15,7 @@ const app = express();
 const port = process.env.PORT || 8800;
 
 const corsOptions = {
-  origin: [`https://fancy-caramel-9e3c4d.netlify.app`],
+  origin: [`https://fancy-caramel-9e3c4d.netlify.app`, `http://localhost:5173`],
   methods: "GET,HEAD,PUT,OPTIONS,POST,DELETE",
   allowedHeaders: [
     "Access-Control-Allow-Headers",
@@ -52,18 +52,18 @@ app.use(
 // );
 
 
-// app.use((req, res, next) => {
+app.use((req, res, next) => {
   
-//   res.setHeader("Access-Control-Allow-Credentials", "true");
-//   // Otras cabeceras CORS si es necesario
-//   res.setHeader(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept"
-//   );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  // Otras cabeceras CORS si es necesario
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
 
-//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-//   next();
-// });
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  next();
+});
 
 app.options(
   "/api/auth/*",
@@ -122,7 +122,7 @@ app.use("/api/uploads", uploadRoutes );
 
 
 app.listen(port, () => {
-  console.log("Connected!");
+  console.log("Connected! in port", port);
 });
 
 export default app;

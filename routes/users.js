@@ -1,5 +1,5 @@
 import express from "express"
-import { approveUser, beneficiosOtorgados, comprobarAfiliados, deleteUser, getAfiliado, getAllAfiliados, getUsers, registerAfiliate, registerFamiliar, updateUsers } from "../controllers/user.js";
+import { approveUser, beneficiosOtorgados, comprobarAfiliados, deleteUser, getAfiliado, getAllAfiliados, getUsers, registerAfiliate, registerFamiliar, soporte, updateUsers } from "../controllers/user.js";
 import multer from "multer";
 const router = express.Router()
 const plainDataMulter = multer().none();
@@ -26,7 +26,7 @@ console.log("Configurando ruta POST /users/beneficios-otorgados...");
 router.get("/beneficios-otorgados/:user", beneficiosOtorgados)
 console.log("Configurando ruta POST /users/registro-familiar...");
 router.post("/registro-familiar", registerFamiliar)
-
+router.post("/soporte", soporte)
 
 //TODO
 

@@ -9,7 +9,7 @@ export const register = (req, res) => {
   const contentAdmin = `<h1>¡Se ha registrado un usuario con el nombre: ${req.body.nombre}!</h1> <p>DATOS DEL USUARIO:  email: ${req.body.email}</p>`;
   const subjectAdmin = "Nuevo registro en UATRE BENEFICIOS";
 
-  const emailUser = [req.body.email];
+  const emailUser = req.body.email;
   const contentUser = `<h1>¡Hola, ${req.body.nombre}, te has registrado correctamente email: ${req.body.email}!</h1> <p>Nuestro equipo revisará tu solicitud y te llegará una confirmación en el caso de que tu cuenta haya sido aprobada.</p>`;
   const subjectUser = "BIENVENIDO A UATRE BENEFICIOS";
 
@@ -176,6 +176,73 @@ export const loginAdmin = (req, res) => {
 };
 }
 
+export const passwordForgot = (req, res) => {
+  const email = req.body.email;
+  console.log(email)
+  
+  if(!req.body.email) return res.status(409).json("Completa todos los campos requeridos.");
+
+  const q = "SELECT * FROM users WHERE email = ?";
+  db.query(q, email, (err, data) => {
+    if (err) return res.status(500).json(err);
+    console.log(data)
+    if (data.length === 0) return res.status(404).json("No se encontró usuario con ese email");
+
+    const secret = data[0].password + "-" + data[0].username;
+    console.log(secret)
+    const payload = jwt.sign({ id: data[0].id }, secret, {expiresIn: "15m"});
+    console.log("Payload:", payload)
+    const link = `${data[0].id}/${payload}`;
+
+    
+    const subject = "Recuperar contraseña";
+    const content = `<h1>¡Hola, ${data[0].username}!</h1> <p>Para recuperar tu contraseña, haz click en el siguiente enlace: <a href="https://fancy-caramel-9e3c4d.netlify.app/reset-password/${link}">Recuperar contraseña</a></p>`;
+
+    sendMail(email, subject, content);
+    return res.status(200).json("Email sent!");
+  });
+};
+
+export const resetPassword = (req, res) => {
+  const { id, token } = req.params;
+  const { password, repeat_password } = req.body;
+
+  if (!password || !repeat_password) return res.status(409).json("Completa todos los campos requeridos.");
+  if (password !== repeat_password) return res.status(409).json("Las contraseñas no coinciden.");
+
+   const q = "SELECT * FROM users WHERE id = ?";
+  db.query(q, [id], (err, data) => {
+    if (err) return res.status(500).json(err);
+    if (data.length === 0)
+      return res.status(404).json("No se encontró usuario con ese email");
+
+    const secret = data[0].password + "-" + data[0].username;
+    try {
+      const verify = jwt.verify(token, secret);
+    } catch (err) {
+      return res.status(401).json("Token inválido.");
+    }
+
+    // jwt.verify(token, "jwtkey", (err, decoded) => {
+    //   if (err) return res.status(401).json("Token inválido.");
+
+    bcrypt.hash(password, 10, (hashErr, hashedPassword) => {
+      if (hashErr)
+        return res.status(500).json("Error al hashear la contraseña.");
+
+      const q = "UPDATE users SET password = ? WHERE id = ?";
+      db.query(q, [hashedPassword, id], (updateErr, updateResult) => {
+        if (updateErr)
+          return res.status(500).json("Error al actualizar la contraseña.");
+        if (updateResult.affectedRows === 0)
+          return res.status(404).json("No se encontró usuario con ese id.");
+
+        return res.status(200).json("Contraseña actualizada con éxito.");
+      });
+    });
+  });
+  // });
+};
 export const logout = (req, res) => {
   res.clearCookie("access_token",{
     sameSite:"none",

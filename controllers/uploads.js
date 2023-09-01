@@ -99,7 +99,7 @@ export const uploadDniFamiliar = (req, res) => {
 
 
 export const uploadLibreta = (req, res) => {
-  const id = req.body.id;
+  const id = req.body.dni;
   const libreta_img = req.files.map((file) => file.path);
 
   // Aquí puedes realizar la lógica para guardar las rutas en la base de datos
@@ -107,7 +107,7 @@ export const uploadLibreta = (req, res) => {
   const query = `
     UPDATE familiares
     SET libreta_img = ?
-    WHERE id = ?
+    WHERE dni = ?
   `;
   const values = [JSON.stringify(libreta_img), id];
 
