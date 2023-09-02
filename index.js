@@ -25,7 +25,7 @@ const corsOptions = {
     "Accept",
     "Authorization",
     "token",
-    "access_token",
+    // "access_token",
     "Access-Control-Request-Method",
     "Access-Control-Request-Headers",
     "Access-Control-Allow-Credentials",
@@ -68,28 +68,37 @@ app.use((req, res, next) => {
 app.options(
   "/api/auth/*",
   cors({
-    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
+    origin: ["https://fancy-caramel-9e3c4d.netlify.app" , "http://localhost:5173"],
     credentials: true,
   })
 );
 app.options(
   "/api/users/*",
   cors({
-    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
+    origin: [
+      "https://fancy-caramel-9e3c4d.netlify.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
   })
 );
 app.options(
   "/api/tasks/*",
   cors({
-    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
+    origin: [
+      "https://fancy-caramel-9e3c4d.netlify.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
   })
 );
 app.options(
   "/api/uploads/*",
   cors({
-    origin: ["https://fancy-caramel-9e3c4d.netlify.app"],
+    origin: [
+      "https://fancy-caramel-9e3c4d.netlify.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
   })
 );
