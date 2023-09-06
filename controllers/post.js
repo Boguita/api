@@ -45,6 +45,66 @@ export const getBeneficiosByDni = (req, res) => {
   });
 };
 
+export const comprobarBeneficioKitMaternal = (req, res) => {
+  const familiarId = req.params.familiar_id;
+ 
+
+  const query = `
+    SELECT *
+    FROM beneficios_otorgados
+    WHERE familiar_id = ?
+      AND tipo = 'Kit maternal'
+      AND estado = 'Pendiente'
+  `;
+
+  db.query(query, [familiarId], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    if (results.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    const estadoBeneficio = results;
+
+    // if (estadoBeneficio === "Pendiente") {
+    //   return res.status(200).json({ estado: "Pendiente" });
+    // } else if (estadoBeneficio === "Entregado") {
+    //   return res.status(200).json({ estado: "Entregado" });
+    // } else if (estadoBeneficio === "Rechazado") {
+    //   return res.status(200).json({ estado: "Rechazado" });
+    // } else if (estadoBeneficio === "Aprobado") {
+    //   return res.status(200).json({ estado: "Aprobado" });
+    // }
+
+    return res.status(200).json(estadoBeneficio);
+  });
+};
+
+export const updateEstadoBeneficio = (req, res) => {
+  const beneficioId = req.params.beneficio_id;
+  const estado = req.body.estado;
+  
+
+  const query = `
+    UPDATE beneficios_otorgados
+    SET estado = ?
+    WHERE id = ?
+  `;
+  db.query(query, [estado, beneficioId], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    return res.status(200).json({ message: "Estado actualizado", ids: [beneficioId] });
+  });
+};
+
+
+
 export const comprobarBeneficios = (req, res) => {
   // const token = req.cookies.access_token;
   // if (!token) return res.status(401).json("No autenticado");
@@ -93,6 +153,7 @@ export const comprobarBeneficios = (req, res) => {
     });
   // });
 };
+
 
 export const otorgarBeneficio = (req, res) => {
   // // const token = req.cookies.access_token;
@@ -151,20 +212,18 @@ export const otorgarBeneficio = (req, res) => {
 
         // Comprobación para Kit Maternal
         if (tipo === "Kit maternal") {
-          console.log(beneficio.fecha_de_parto)
+          console.log(beneficio.fecha_de_parto);
           const fechaParto = new Date(beneficio.fecha_de_parto);
-          
           console.log(fechaParto);
-         
 
           const checkBeneficioQuery = `
-            SELECT COUNT(*) AS count
-            FROM
-              beneficios_otorgados 
-            WHERE
-              familiar_id = ?
-              AND tipo = 'Kit maternal'
-              AND fecha_otorgamiento >= DATE_SUB(?, INTERVAL 9 MONTH)`;
+    SELECT COUNT(*) AS count
+    FROM
+      beneficios_otorgados 
+    WHERE
+      familiar_id = ?
+      AND tipo = 'Kit maternal'
+      AND fecha_otorgamiento >= DATE_SUB(?, INTERVAL 9 MONTH)`;
 
           db.query(
             checkBeneficioQuery,
@@ -199,6 +258,20 @@ export const otorgarBeneficio = (req, res) => {
                 usuario_otorgante: usuarioOtorgante,
                 estado,
               };
+
+              // Calcular la diferencia en meses entre la fecha actual y la fecha de parto
+              const hoy = new Date();
+              const diferenciaMeses =
+                fechaParto.getMonth() -
+                hoy.getMonth() +
+                12 * (fechaParto.getFullYear() - hoy.getFullYear());
+
+              // Si quedan 3 o menos meses para el parto, establecer plazo en "Urgente," de lo contrario, en "Normal"
+              if (diferenciaMeses <= 3) {
+                beneficioOtorgado.plazo = "Urgente";
+              } else {
+                beneficioOtorgado.plazo = "Normal";
+              }
 
               const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
               db.query(
@@ -310,6 +383,30 @@ export const otorgarBeneficio = (req, res) => {
                     }
                   );
                 } else if (tipo === "Luna de miel") {
+                  const lunaDeMielInfo = {
+                    beneficio_otorgado_id: insertResult.insertId,
+                    numero_libreta: beneficio.numero_libreta,
+                  };
+
+
+                  const insertLunaDeMielQuery =
+                    "INSERT INTO luna_de_miel SET ?";
+                  db.query(
+                    insertLunaDeMielQuery,
+                    lunaDeMielInfo,
+                    function (err) {
+                      if (err) {
+                        db.rollback(function () {
+                          console.log(err);
+                          return res
+                            .status(500)
+                            .json({ error: "Error en el servidor" });
+                        });
+                      }
+                    });
+                 
+
+
                   insertBeneficio(index + 1);
                 } else {
                   db.rollback(function () {
@@ -351,19 +448,16 @@ export const getAll = (req, res) => {
   });
 };
 
-export const getPosts = (req, res) => {
+export const getBeneficios = (req, res) => {
   const token = req.cookies.access_token;
   if (!token) return res.status(401).json("Not authenticated!");
 
   jwt.verify(token, "jwtkey", (err, userInfo) => {
     if (err) return res.status(403).json("Token is not valid!");
 
-    const uid = userInfo.id;
-    const q = req.query.cat
-      ? "SELECT * FROM tickets WHERE uid=? AND cat=?"
-      : "SELECT * FROM tickets WHERE uid=?";
-
-    db.query(q, [uid, req.query.cat], (err, data) => {
+    const q = 
+       "SELECT * FROM beneficios_otorgados"
+    db.query(q, (err, data) => {
       if (err) return res.status(500).send(err);
 
       return res.status(200).json(data);

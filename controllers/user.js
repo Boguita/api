@@ -182,12 +182,6 @@ CONCAT(
   ),
   ']'
 ) AS familiares_data
-
-
-
-
-
-
       FROM
         afiliados
       LEFT JOIN
