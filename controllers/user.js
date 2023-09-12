@@ -16,6 +16,28 @@ export const getUsers = (req, res) => {
   });
 };
 
+export const getAllUsers = (req, res) => {
+  const token = req.cookies.access_token;
+  console.log(token);
+  if (!token) return res.status(401).json("Not authenticated!");
+
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+    if (err) return res.status(403).json("Token is not valid!");
+
+    const q = "SELECT * FROM users";
+    db.query(q, (err, data) => {
+      if (err) return res.status(500).json(err);
+      
+      return res.status(200).json(data);
+    });
+  });
+};
+
+
+
+
+
+
 export const updateUsers = (req, res) => {
   const uid = req.body.id;
   const password = req.body.password;
@@ -396,15 +418,14 @@ export const registerFamiliar = (req, res) => {
 
 
 export const beneficiosOtorgados = (req, res) => {
-  const user = req.params.user;
+  
   const q = `
     SELECT tipo, MONTH(fecha_otorgamiento) AS month, COUNT(tipo) AS cantidad
-    FROM beneficios_otorgados
-    WHERE usuario_otorgante = ?
+    FROM beneficios_otorgados    
     GROUP BY tipo, month
   `;
 
-  db.query(q, [user], (error, results) => {
+  db.query(q, (error, results) => {
     if (error) {
       console.error("Error:", error);
       res

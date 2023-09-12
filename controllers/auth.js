@@ -143,16 +143,16 @@ export const getCookies = (req, res) => {
 
 
 export const loginAdmin = (req, res) => {
-  if(!req.body.username, !req.body.password) {
+  if(!req.body.email, !req.body.password) {
     return res.status(409).json("Completa todos los campos requeridos")
   } else {
     //CHECK USER
 
-  const adm = "SELECT * FROM employee WHERE username = ?";
+  const adm = "SELECT * FROM employee WHERE email = ?";
 
-  db.query(adm, [req.body.username], (err, data) => {
+  db.query(adm, [req.body.email], (err, data) => {
     if (err) return res.status(500).json(err);
-    if (data.length === 0) return res.status(404).json("No se encontró usuario con ese nombre");
+    if (data.length === 0) return res.status(404).json("El usuario y/o la contraseña son incorrectos");
 
     //Check password
     const isPasswordCorrect = bcrypt.compareSync(
