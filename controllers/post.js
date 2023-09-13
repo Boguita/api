@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 
 
 export const getBeneficiosByDni = (req, res) => {
-   
   const dni = req.params.dni;
 
   const query = `
@@ -11,16 +10,16 @@ export const getBeneficiosByDni = (req, res) => {
       beneficios_otorgados.id,
       beneficios_otorgados.tipo,
       beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
       kit_escolar.mochila,
       kit_escolar.guardapolvo,
-      kit_escolar.utiles,
+      kit_escolar.utiles,      
       beneficios_otorgados.fecha_otorgamiento,
       beneficios_otorgados.afiliado_id,
       beneficios_otorgados.familiar_id,
       familiares.name AS familiar_name,
       familiares.dni AS familiar_dni,
       familiares.tel AS familiar_tel,
-      
       familiares.categoria AS familiar_categoria
     FROM
       beneficios_otorgados
@@ -30,9 +29,12 @@ export const getBeneficiosByDni = (req, res) => {
       afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
     LEFT JOIN
       kit_escolar ON beneficios_otorgados.id = kit_escolar.beneficio_otorgado_id
+    LEFT JOIN
+      kit_maternal ON beneficios_otorgados.id = kit_maternal.beneficio_otorgado_id
+    LEFT JOIN
+      luna_de_miel ON beneficios_otorgados.id = luna_de_miel.beneficio_otorgado_id
     WHERE
       afiliados.dni = ? 
-      AND beneficios_otorgados.tipo = 'Kit escolar'
   `;
 
   db.query(query, [dni], (err, results) => {
