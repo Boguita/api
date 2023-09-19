@@ -210,25 +210,92 @@ export const uploadRecibo = (req, res) => {
   console.log(recibo_sueldo);
 
   const query = `
-    UPDATE afiliados
-    SET recibo_sueldo = ?
+    SELECT recibo_sueldo, old_recibo
+    FROM afiliados
     WHERE dni = ?
   `;
 
-  const values = [JSON.stringify(recibo_sueldo), dni];
-
-  db.query(query, values, (err, results) => {
+  db.query(query, [dni], (err, results) => {
     if (err) {
       console.log(err);
       return res.status(500).json({ error: "Error en el servidor" });
     }
-    console.log("Query result:", results);
-    return res.json({
-      message: "Imágenes del recibo de sueldo cargadas exitosamente",
-    });
-  });
 
-}
+    const existingReciboSueldo = JSON.parse(results[0].recibo_sueldo || "[]");
+    const existingOldRecibo = JSON.parse(results[0].old_recibo || "[]");
+
+    // Si recibo_sueldo está vacío, simplemente actualiza el campo
+    if (existingReciboSueldo.length === 0) {
+      const updateQuery = `
+        UPDATE afiliados
+        SET recibo_sueldo = ?
+        WHERE dni = ?
+      `;
+
+      const updateValues = [JSON.stringify(recibo_sueldo), dni];
+
+      db.query(updateQuery, updateValues, (updateErr, updateResults) => {
+        if (updateErr) {
+          console.log(updateErr);
+          return res.status(500).json({ error: "Error en el servidor" });
+        }
+
+        console.log("Query result (recibo_sueldo):", updateResults);
+
+        return res.json({
+          message: "Imágenes del recibo de sueldo cargadas exitosamente",
+        });
+      });
+    } else {
+      // Mover las rutas antiguas a old_recibo
+      const newOldRecibo = existingOldRecibo.concat(existingReciboSueldo);
+
+      // Actualizar recibo_sueldo con las nuevas rutas
+      const updateQuery = `
+        UPDATE afiliados
+        SET recibo_sueldo = ?
+        WHERE dni = ?
+      `;
+
+      const updateValues = [JSON.stringify(recibo_sueldo), dni];
+
+      db.query(updateQuery, updateValues, (updateErr, updateResults) => {
+        if (updateErr) {
+          console.log(updateErr);
+          return res.status(500).json({ error: "Error en el servidor" });
+        }
+
+        // Actualizar old_recibo con las rutas antiguas
+        const oldReciboQuery = `
+          UPDATE afiliados
+          SET old_recibo = ?
+          WHERE dni = ?
+        `;
+
+        const oldReciboValues = [JSON.stringify(newOldRecibo), dni];
+
+        db.query(
+          oldReciboQuery,
+          oldReciboValues,
+          (oldReciboErr, oldReciboResults) => {
+            if (oldReciboErr) {
+              console.log(oldReciboErr);
+              return res.status(500).json({ error: "Error en el servidor" });
+            }
+
+            console.log("Query result (recibo_sueldo):", updateResults);
+            console.log("Query result (old_recibo):", oldReciboResults);
+
+            return res.json({
+              message: "Imágenes del recibo de sueldo cargadas exitosamente",
+            });
+          }
+        );
+      });
+    }
+  });
+};
+
 // export const uploadImages = (req, res) => {
 //   const imageTypes = ["dni_img", "recibo_sueldo"];
 //   const imagesToSave = [];

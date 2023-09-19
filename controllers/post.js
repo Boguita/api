@@ -1,6 +1,6 @@
 import { db } from "../db.js";
 import jwt from "jsonwebtoken";
-
+import excel from "exceljs";
 
 export const getBeneficiosByDni = (req, res) => {
   const dni = req.params.dni;
@@ -46,6 +46,567 @@ export const getBeneficiosByDni = (req, res) => {
     return res.status(200).json(results);
   });
 };
+
+export const getKitLunadeMielExcel = (req, res) => {
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
+      luna_de_miel.numero_libreta,           
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      kit_maternal ON beneficios_otorgados.id = kit_maternal.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.tipo = 'Kit maternal'
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    // Crear un nuevo libro de Excel
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Kit Maternal");
+
+    // Definir las columnas en el archivo Excel con estilo
+    const headerRow = worksheet.addRow([
+      "ID",
+      "Tipo",
+      "Detalles",
+      "Estado",
+      "Semanas",
+      "Fecha de Parto",
+      "Cantidad",
+      "Fecha de Otorgamiento",
+      "Afiliado ID",
+      "Afiliado",
+      "DNI Afiliado",
+      "Familiar ID",
+      "Nombre del Familiar",
+      "DNI del Familiar",
+      "Teléfono del Familiar",
+      "Categoría del Familiar",
+    ]);
+
+    // Aplicar estilo a la fila de encabezado
+    headerRow.eachCell((cell, index) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF23A1D8" },
+      };
+      cell.font = {
+        bold: true, // Texto en negrita
+      };
+      cell.alignment = {
+        vertical: "middle", // Alineación vertical centrada
+        horizontal: "center", // Alineación horizontal centrada
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      if (
+        index === 1 ||
+        index === 2 ||
+        index === 3 ||
+        index === 4 ||
+        index === 5 ||
+        index === 6 ||
+        index === 7 ||
+        index === 9 ||
+        index === 10 ||
+        index === 11 ||
+        index === 12 ||
+        index === 13 ||
+        index === 14 ||
+        index === 15
+      ) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Agregar los datos a las filas del archivo Excel con estilo
+    results.forEach((row) => {
+      worksheet.addRow([
+        row.id,
+        row.tipo,
+        row.detalles,
+        row.estado,
+        row.semanas,
+        row.fecha_de_parto,
+        row.cantidad,
+        row.fecha_otorgamiento,
+        row.afiliado_id,
+        row.afiliado_name,
+        row.afiliado_dni,
+        row.familiar_id,
+        row.familiar_name,
+        row.familiar_dni,
+        row.familiar_tel,
+        row.familiar_categoria,
+      ]);
+    });
+
+    function getExcelAlpha(num) {
+      let alpha = "";
+      while (num > 0) {
+        const remainder = (num - 1) % 26;
+        alpha = String.fromCharCode(65 + remainder) + alpha;
+        num = Math.floor((num - 1) / 26);
+      }
+      return alpha;
+    }
+
+    // Aplicar bordes internos a la tabla de datos
+    const numDataRows = results.length;
+    const numColumns = headerRow.actualCellCount;
+    const lastDataRow = worksheet.getRow(numDataRows + 1);
+
+    for (let i = 1; i <= numColumns; i++) {
+      for (let j = 2; j <= numDataRows + 1; j++) {
+        worksheet.getCell(`${getExcelAlpha(i)}${j}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+          bottom: { style: "thin" },
+        };
+      }
+    }
+
+    // Aplicar bordes exteriores a la tabla de datos
+    for (let i = 1; i <= numColumns; i++) {
+      worksheet.getCell(`${getExcelAlpha(i)}1`).border = {
+        top: { style: "thin" }, // Bordes superiores de las columnas de encabezado
+        bottom: { style: "thin" }, // Bordes inferiores de las columnas de datos
+        left: { style: "thin" }, // Borde izquierdo de la columna
+        right: { style: "thin" }, // Borde derecho de la columna
+      };
+    }
+
+    lastDataRow.eachCell((cell, index) => {
+      cell.border = {
+        bottom: { style: "thin" }, // Bordes inferiores de la última fila de datos
+        left: { style: "thin" }, // Borde izquierdo de la última fila de datos
+        right: { style: "thin" }, // Borde derecho de la última fila de datos
+      };
+    });
+
+    // Configurar la respuesta HTTP para descargar el archivo Excel
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=kit_escolar.xlsx"
+    );
+
+    // Enviar el archivo Excel como respuesta
+    workbook.xlsx.write(res).then(() => {
+      res.end();
+    });
+  });
+};
+
+
+export const getKitMaternalExcel = (req, res) => {
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
+      kit_maternal.semanas,
+      kit_maternal.fecha_de_parto,
+      kit_maternal.cantidad,      
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      kit_maternal ON beneficios_otorgados.id = kit_maternal.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.tipo = 'Kit maternal'
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    // Crear un nuevo libro de Excel
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Kit Maternal");
+
+    // Definir las columnas en el archivo Excel con estilo
+    const headerRow = worksheet.addRow([
+      "ID",
+      "Tipo",
+      "Detalles",
+      "Estado",
+      "Semanas",
+      "Fecha de Parto",
+      "Cantidad",
+      "Fecha de Otorgamiento",
+      "Afiliado ID",
+      "Afiliado",
+      "DNI Afiliado",
+      "Familiar ID",
+      "Nombre del Familiar",
+      "DNI del Familiar",
+      "Teléfono del Familiar",
+      "Categoría del Familiar",
+    ]);
+
+    // Aplicar estilo a la fila de encabezado
+    headerRow.eachCell((cell, index) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF23A1D8" },
+      };
+      cell.font = {
+        bold: true, // Texto en negrita
+      };
+      cell.alignment = {
+        vertical: "middle", // Alineación vertical centrada
+        horizontal: "center", // Alineación horizontal centrada
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      if (
+        index === 1 ||
+        index === 2 ||
+        index === 3 ||
+        index === 4 ||
+        index === 5 ||
+        index === 6 ||
+        index === 7 ||
+        index === 9 ||
+        index === 10 ||
+        index === 11 ||
+        index === 12 ||
+        index === 13 ||
+        index === 14 ||
+        index === 15
+      ) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Agregar los datos a las filas del archivo Excel con estilo
+    results.forEach((row) => {
+      worksheet.addRow([
+        row.id,
+        row.tipo,
+        row.detalles,
+        row.estado,
+        row.semanas,
+        row.fecha_de_parto,
+        row.cantidad,
+        row.fecha_otorgamiento,
+        row.afiliado_id,
+        row.afiliado_name,
+        row.afiliado_dni,
+        row.familiar_id,
+        row.familiar_name,
+        row.familiar_dni,
+        row.familiar_tel,
+        row.familiar_categoria,
+      ]);
+    });
+
+    function getExcelAlpha(num) {
+      let alpha = "";
+      while (num > 0) {
+        const remainder = (num - 1) % 26;
+        alpha = String.fromCharCode(65 + remainder) + alpha;
+        num = Math.floor((num - 1) / 26);
+      }
+      return alpha;
+    }
+
+    // Aplicar bordes internos a la tabla de datos
+    const numDataRows = results.length;
+    const numColumns = headerRow.actualCellCount;
+    const lastDataRow = worksheet.getRow(numDataRows + 1);
+
+    for (let i = 1; i <= numColumns; i++) {
+      for (let j = 2; j <= numDataRows + 1; j++) {
+        worksheet.getCell(`${getExcelAlpha(i)}${j}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+          bottom: { style: "thin" },
+        };
+      }
+    }
+
+    // Aplicar bordes exteriores a la tabla de datos
+    for (let i = 1; i <= numColumns; i++) {
+      worksheet.getCell(`${getExcelAlpha(i)}1`).border = {
+        top: { style: "thin" }, // Bordes superiores de las columnas de encabezado
+        bottom: { style: "thin" }, // Bordes inferiores de las columnas de datos
+        left: { style: "thin" }, // Borde izquierdo de la columna
+        right: { style: "thin" }, // Borde derecho de la columna
+      };
+    }
+
+    lastDataRow.eachCell((cell, index) => {
+      cell.border = {
+        bottom: { style: "thin" }, // Bordes inferiores de la última fila de datos
+        left: { style: "thin" }, // Borde izquierdo de la última fila de datos
+        right: { style: "thin" }, // Borde derecho de la última fila de datos
+      };
+    });
+
+    // Configurar la respuesta HTTP para descargar el archivo Excel
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=kit_escolar.xlsx"
+    );
+
+    // Enviar el archivo Excel como respuesta
+    workbook.xlsx.write(res).then(() => {
+      res.end();
+    });
+  });
+};
+
+
+
+
+export const getKitEscolarExcel = (req, res) => {
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
+      kit_escolar.mochila,
+      kit_escolar.guardapolvo,
+      kit_escolar.utiles,      
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      kit_escolar ON beneficios_otorgados.id = kit_escolar.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.tipo = 'Kit escolar'
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    // Crear un nuevo libro de Excel
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Kit Escolar");
+
+    // Definir las columnas en el archivo Excel con estilo
+    const headerRow = worksheet.addRow([
+      "ID",
+      "Tipo",
+      "Detalles",
+      "Estado",
+      "Mochila",
+      "Guardapolvo",
+      "Útiles",
+      "Fecha de Otorgamiento",
+      "Afiliado ID",
+      "Afiliado",
+      "DNI Afiliado",
+      "Familiar ID",
+      "Nombre del Familiar",
+      "DNI del Familiar",
+      "Teléfono del Familiar",
+      "Categoría del Familiar",
+    ]);
+
+    // Aplicar estilo a la fila de encabezado
+    headerRow.eachCell((cell, index) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF23A1D8" },
+      };
+      cell.font = {
+        bold: true, // Texto en negrita
+      };
+      cell.alignment = {
+        vertical: "middle", // Alineación vertical centrada
+        horizontal: "center", // Alineación horizontal centrada
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      if (
+        index === 1 ||
+        index === 2 ||
+        index === 3 ||
+        index === 4 ||
+        index === 5 ||
+        index === 6 ||
+        index === 7 ||
+        index === 9 ||
+        index === 10 ||
+        index === 11 ||
+        index === 12 ||
+        index === 13 ||
+        index === 14 ||
+        index === 15
+      ) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Agregar los datos a las filas del archivo Excel con estilo
+    results.forEach((row) => {
+      worksheet.addRow([
+        row.id,
+        row.tipo,
+        row.detalles,
+        row.estado,
+        row.mochila,
+        row.guardapolvo,
+        row.utiles,
+        row.fecha_otorgamiento,
+        row.afiliado_id,
+        row.afiliado_name,
+        row.afiliado_dni,
+        row.familiar_id,
+        row.familiar_name,
+        row.familiar_dni,
+        row.familiar_tel,
+        row.familiar_categoria,
+      ]);
+    });
+
+    function getExcelAlpha(num) {
+      let alpha = "";
+      while (num > 0) {
+        const remainder = (num - 1) % 26;
+        alpha = String.fromCharCode(65 + remainder) + alpha;
+        num = Math.floor((num - 1) / 26);
+      }
+      return alpha;
+    }
+
+    // Aplicar bordes internos a la tabla de datos
+    const numDataRows = results.length;
+    const numColumns = headerRow.actualCellCount;
+    const lastDataRow = worksheet.getRow(numDataRows + 1);
+
+    for (let i = 1; i <= numColumns; i++) {
+      for (let j = 2; j <= numDataRows + 1; j++) {
+        worksheet.getCell(`${getExcelAlpha(i)}${j}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+          bottom: { style: "thin" },
+        };
+      }
+    }
+
+    // Aplicar bordes exteriores a la tabla de datos
+    for (let i = 1; i <= numColumns; i++) {
+      worksheet.getCell(`${getExcelAlpha(i)}1`).border = {
+        top: { style: "thin" }, // Bordes superiores de las columnas de encabezado
+        bottom: { style: "thin" }, // Bordes inferiores de las columnas de datos
+        left: { style: "thin" }, // Borde izquierdo de la columna
+        right: { style: "thin" }, // Borde derecho de la columna
+      };
+    }
+
+    lastDataRow.eachCell((cell, index) => {
+      cell.border = {
+        bottom: { style: "thin" }, // Bordes inferiores de la última fila de datos
+        left: { style: "thin" }, // Borde izquierdo de la última fila de datos
+        right: { style: "thin" }, // Borde derecho de la última fila de datos
+      };
+    });
+
+    // Configurar la respuesta HTTP para descargar el archivo Excel
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=kit_escolar.xlsx"
+    );
+
+    // Enviar el archivo Excel como respuesta
+    workbook.xlsx.write(res).then(() => {
+      res.end();
+    });
+  });
+};
+
 
 export const comprobarBeneficioKitMaternal = (req, res) => {
   const familiarId = req.params.familiar_id;
@@ -123,6 +684,7 @@ export const comprobarBeneficios = (req, res) => {
         beneficios_otorgados.detalles,
         kit_escolar.mochila,
         kit_escolar.guardapolvo,
+        kit_escolar.guardapolvo_confirm,
         kit_escolar.utiles,
         beneficios_otorgados.fecha_otorgamiento,
         beneficios_otorgados.afiliado_id,
@@ -363,6 +925,7 @@ export const otorgarBeneficio = (req, res) => {
                     beneficio_otorgado_id: insertResult.insertId,
                     mochila: beneficio.mochila,
                     guardapolvo: beneficio.guardapolvo,
+                    guardapolvo_confirm: beneficio.guardapolvo_confirm,
                     utiles: beneficio.utiles,
                     año_escolar: beneficio.año_escolar,
                   };

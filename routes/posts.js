@@ -5,6 +5,10 @@ import {
   getBeneficios,
   getBeneficiosByDni,
  
+  getKitEscolarExcel,
+ 
+  getKitMaternalExcel,
+ 
   otorgarBeneficio,
   updateEstadoBeneficio,
 } from "../controllers/post.js";
@@ -17,6 +21,8 @@ router.get("/beneficio/:dni", getBeneficiosByDni);
 router.get("/verified-kit-escolar/:familiar_ids", comprobarBeneficios);
 router.get("/verified-kit-maternal/:familiar_id", comprobarBeneficioKitMaternal)
 router.put("/:beneficio_id", updateEstadoBeneficio)
+router.get("/kit-escolar/excel", getKitEscolarExcel)
+router.get("/kit-maternal/excel", getKitMaternalExcel);
 
 
 

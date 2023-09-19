@@ -354,6 +354,10 @@ export const registerAfiliate = (req, res) => {
   // });
 };
 
+
+
+
+
 export const registerFamiliar = (req, res) => {
   // const token = req.cookies.access_token;
 
@@ -370,6 +374,7 @@ export const registerFamiliar = (req, res) => {
       libreta_img,
       fecha_de_nacimiento,
       categoria,
+      numero_libreta,
       id_afiliado,
     } = req.body;
 
@@ -386,8 +391,8 @@ export const registerFamiliar = (req, res) => {
     }
 
     const insertQuery = `
-      INSERT INTO familiares (name, dni, tel, fecha_de_nacimiento, categoria, id_afiliado)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO familiares (name, dni, tel, fecha_de_nacimiento, categoria, numero_libreta, id_afiliado)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     db.query(
       insertQuery,
@@ -397,6 +402,7 @@ export const registerFamiliar = (req, res) => {
         tel,
         fecha_de_nacimiento,
         categoria,
+        numero_libreta,
         id_afiliado,
       ],
       (err, results) => {
