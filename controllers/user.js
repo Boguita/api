@@ -184,7 +184,8 @@ export const getAfiliado = (req, res) => {
         afiliados.domicilio AS afiliado_domicilio,
         afiliados.correo AS afiliado_correo,
         afiliados.datos_empleador AS afiliado_datos_empleador, -- Nueva columna para los datos del empleador
-        afiliados.dni_img AS afiliado_dni_img,         -- Nueva columna para la ruta de la imagen DNI
+        afiliados.dni_img_frente AS afiliado_dni_img_frente,         -- Nueva columna para la ruta de la imagen DNI
+        afiliados.dni_img_dorso AS afiliado_dni_img_dorso, 
         afiliados.recibo_sueldo AS afiliado_recibo_sueldo, -- Nueva columna para la ruta del recibo de sueldo
         afiliados.provincia AS afiliado_provincia,
         afiliados.ciudad AS afiliado_ciudad,
@@ -198,6 +199,8 @@ CONCAT(
       'tel', familiares.tel,
       'categoria', familiares.categoria,
       'id', familiares.idfamiliares,
+      'dni_img_frente', familiares.dni_img_frente,
+      'dni_img_dorso', familiares.dni_img_dorso,
       'dni_img', IFNULL(familiares.dni_img, 'null'),
       'libreta_img', IFNULL(familiares.libreta_img, 'null')
     )
@@ -243,8 +246,11 @@ CONCAT(
           ? JSON.parse(results[0].afiliado_datos_empleador)
           : null,
 
-        dni_img: results[0].afiliado_dni_img
-          ? JSON.parse(results[0].afiliado_dni_img)
+        dni_img_frente: results[0].afiliado_dni_img_frente
+          ? results[0].afiliado_dni_img_frente
+          : null,
+        dni_img_dorso: results[0].afiliado_dni_img_dorso
+          ? results[0].afiliado_dni_img_dorso
           : null,
 
         recibo_sueldo: results[0].afiliado_recibo_sueldo
@@ -259,8 +265,16 @@ CONCAT(
               tel: familiar.tel || "",
               categoria: familiar.categoria || "",
               id: familiar.id || "",
-              libreta_img: familiar.libreta_img ? JSON.parse(familiar.libreta_img) : [],
+              libreta_img: familiar.libreta_img
+                ? JSON.parse(familiar.libreta_img)
+                : [],
               dni_img: familiar.dni_img ? JSON.parse(familiar.dni_img) : [],
+              dni_img_frente: familiar.dni_img_frente
+                ? familiar.dni_img_frente
+                : [],
+              dni_img_dorso: familiar.dni_img_dorso
+                ? familiar.dni_img_dorso
+                : [],
             }))
           : [],
       };

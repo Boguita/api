@@ -4,8 +4,24 @@ import { getImagesByDni, handleMulterError, upload, uploadCertificado, uploadCon
 const router = express.Router();
 
 // router.post("/images",upload.array("images", 4), uploadImages);
-router.post("/images-dni", upload.array("dni_img", 2), uploadDni);
-router.post("/images-dni-familiar", upload.array("dni_img_familiar", 2), uploadDniFamiliar);
+
+router.post(
+  "/images-dni",
+  upload.fields([
+    { name: "dni_img_frente", maxCount: 1 },
+    { name: "dni_img_dorso", maxCount: 1 },
+  ]),
+  uploadDni
+);
+router.post(
+  "/images-dni-familiar",
+  upload.fields([
+    { name: "dni_img_frente", maxCount: 1 },
+    { name: "dni_img_dorso", maxCount: 1 },
+  ]),
+  uploadDniFamiliar
+);
+// router.post("/images-dni-familiar", upload.array("dni_img_dorso", 2), uploadDniFamiliar);
 router.post("/images-recibo", upload.array("recibo_sueldo", 4), uploadRecibo);
 router.put("/images-recibo", upload.array("recibo_sueldo", 4), uploadRecibo);
 router.post("/images-libreta", upload.array("libreta", 4), uploadLibreta);

@@ -682,6 +682,7 @@ export const comprobarBeneficios = (req, res) => {
         beneficios_otorgados.id,
         beneficios_otorgados.tipo,
         beneficios_otorgados.detalles,
+        kit_escolar.año_escolar,
         kit_escolar.mochila,
         kit_escolar.guardapolvo,
         kit_escolar.guardapolvo_confirm,
@@ -773,7 +774,7 @@ export const otorgarBeneficio = (req, res) => {
         } = beneficio;
 
         const usuarioOtorgante = usuario_otorgante;
-
+        const añoActual = new Date().getFullYear();
         // Comprobación para Kit Maternal
         if (tipo === "Kit maternal") {
           console.log(beneficio.fecha_de_parto);
@@ -785,13 +786,13 @@ export const otorgarBeneficio = (req, res) => {
     FROM
       beneficios_otorgados 
     WHERE
-      familiar_id = ?
+      afiliado_id = ?
       AND tipo = 'Kit maternal'
-      AND fecha_otorgamiento >= DATE_SUB(?, INTERVAL 9 MONTH)`;
+      AND YEAR(fecha_otorgamiento) = ?`;
 
           db.query(
             checkBeneficioQuery,
-            [beneficio.familiar_id, fechaParto],
+            [ beneficio.afiliado_id, añoActual],
             function (err, results) {
               if (err) {
                 db.rollback(function () {
@@ -809,7 +810,7 @@ export const otorgarBeneficio = (req, res) => {
               if (count > 0) {
                 return res.status(400).json({
                   error:
-                    "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 9 meses antes de la fecha de parto.",
+                    "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 12 meses.",
                 });
               }
 

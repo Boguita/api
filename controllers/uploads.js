@@ -73,16 +73,27 @@ export const uploadCertificado = (req, res) => {
 
 export const uploadDniFamiliar = (req, res) => {
   const id = req.body.dni;
-  const dni_img = req.files.map((file) => file.path);
+
+  // Acceder a los archivos del frente y el dorso del DNI
+  const dni_img_frente = req.files["dni_img_frente"];
+  const dni_img_dorso = req.files["dni_img_dorso"];
+
+  // Verificar si los archivos existen
+  if (!dni_img_frente || !dni_img_dorso) {
+    return res.status(400).json({ error: "Debes subir ambos lados del DNI" });
+  }
 
   // Aquí puedes realizar la lógica para guardar las rutas en la base de datos
   // Por ejemplo, si estás utilizando MySQL, podrías hacer una consulta SQL para actualizar el campo "dni_img" con las rutas de las imágenes
+
   const query = `
     UPDATE familiares
-    SET dni_img = ?
+    SET dni_img_frente = ?,
+        dni_img_dorso = ?
     WHERE dni = ?
   `;
-  const values = [JSON.stringify(dni_img), id];
+
+  const values = [dni_img_frente[0].path, dni_img_dorso[0].path, id];
 
   db.query(query, values, (err, results) => {
     if (err) {
@@ -91,7 +102,7 @@ export const uploadDniFamiliar = (req, res) => {
     }
     console.log("Query result:", results);
     return res.json({
-      message: "Imágenes de dni cargadas exitosamente",
+      message: "Imágenes de DNI cargadas exitosamente",
     });
   });
 };
@@ -154,18 +165,26 @@ const idsArray = idsString.split(",").map((id) => parseInt(id.trim(), 10));
 
 export const uploadDni = (req, res) => {
   const dni = req.body.dni;
-  const dniImages = req.files.map((file) => file.path);
+  
+  const dni_img_frente = req.files["dni_img_frente"];
+  const dni_img_dorso = req.files["dni_img_dorso"];
+
+  // Verificar si los archivos existen
+  if (!dni_img_frente || !dni_img_dorso) {
+    return res.status(400).json({ error: "Debes subir ambos lados del DNI" });
+  }
   
 
   // Aquí puedes realizar la lógica para guardar las rutas en la base de datos
   // Por ejemplo, si estás utilizando MySQL, podrías hacer una consulta SQL para actualizar el campo "dni_img" con las rutas de las imágenes
   const query = `
     UPDATE afiliados
-    SET dni_img = ?
+    SET dni_img_frente = ?,
+        dni_img_dorso = ?
     WHERE dni = ?
   `;
-  const values = [JSON.stringify(dniImages), dni];
 
+  const values = [dni_img_frente[0].path, dni_img_dorso[0].path, dni];
   db.query(query, values, (err, results) => {
     if (err) {
       console.log(err);
