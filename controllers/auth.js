@@ -40,7 +40,7 @@ export const register = (req, res) => {
           domicilio: req.body.domicilio,
           tel: req.body.tel,
           password: hash,
-          approved: false, // Set the 'approved' field to false for pending approval
+          status: 'Pendiente', // Set the 'approved' field to false for pending approval
         };
 
         const q = "INSERT INTO users SET ?";
@@ -112,7 +112,8 @@ export const login = (req, res) => {
     if (!isPasswordCorrect)
       return res.status(400).json("El usuario y/o la contraseña son incorrectos");
 
-    if(!data[0].approved) return res.status(401).json("Tu cuenta aún no se encuentra habilitada.")
+    if (data[0].status === "Pendiente" || data[0].status === "Rechazado")
+      return res.status(401).json("Tu cuenta aún no se encuentra habilitada.");
 
     const token = jwt.sign({ id: data[0].id }, "jwtkey");
     const { password, ...other } = data[0];

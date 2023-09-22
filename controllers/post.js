@@ -607,6 +607,44 @@ export const getKitEscolarExcel = (req, res) => {
   });
 };
 
+export const getLunaDeMiel = (req, res) =>
+{
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
+      luna_de_miel.numero_libreta,     
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      luna_de_miel ON beneficios_otorgados.id = luna_de_miel.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.tipo = 'Luna de miel'
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+    return res.status(200).json(results);
+  });
+};
+
 
 export const comprobarBeneficioKitMaternal = (req, res) => {
   const familiarId = req.params.familiar_id;

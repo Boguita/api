@@ -284,6 +284,23 @@ CONCAT(
   // });
 };
 
+export const deleteAfiliado = (req, res) => {
+  const idafiliados = req.params.id; // Obtener el idafiliados de los parámetros de la solicitud
+
+  const query = `
+    DELETE FROM afiliados
+    WHERE idafiliados = ?
+  `;
+  db.query(query, [idafiliados], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    return res.status(200).json({ message: "Afiliado eliminado exitosamente" });
+  });
+};
+
 
 
 export const registerAfiliate = (req, res) => {
@@ -510,7 +527,7 @@ export const approveUser = (req, res) => {
   const subjectUser = "ESTADO DE SOLICITUD UATRE BENEFICIOS";
 
   const selectQuery = "SELECT * FROM users WHERE username = ?";
-  const updateQuery = "UPDATE users SET approved = true WHERE username = ?";
+  const updateQuery = "UPDATE users SET status = 'Aprobado' WHERE username = ?";
 
   // First, check if the user exists and is not already approved
   db.query(selectQuery, [username], (err, data) => {
@@ -519,7 +536,7 @@ export const approveUser = (req, res) => {
       return res.status(404).json("No se encontró usuario con ese nombre");
 
     const user = data[0];
-    if (user.approved) {
+    if (user.status === "Aprobado") {
       return res.status(409).json("El usuario ya está aprobado."); // User is already approved
     }
 
@@ -529,7 +546,7 @@ export const approveUser = (req, res) => {
 
       // Check if any rows were affected by the update query
       if (result.affectedRows === 0) {
-        return res.status(404).json("User not found!"); // User may not have been found in the database
+        return res.status(404).json("Usuario no encontrado"); // User may not have been found in the database
       }
 
       // If the 'approved' field is successfully updated to true
@@ -538,6 +555,48 @@ export const approveUser = (req, res) => {
     });
   });
 };
+
+export const declineUser = (req, res) => {
+  const username = req.body.username;
+  const emailUser = [req.body.email];
+
+  const contentUser = `<h1>¡Hola ${req.body.username}, tu solicitud de registro ha sido RECHAZADA!</h1> <p>Nuestro equipo revisó tu solicitud y NO cumple con las normas y requerimientos necesarios para su aprobación. Por cualquier duda o consulta, contactarse a traves de cualquier medio oficial disponible.</p>`;
+  const subjectUser = "ESTADO DE SOLICITUD UATRE BENEFICIOS";
+
+  const selectQuery = "SELECT * FROM users WHERE username = ?";
+  const updateQuery =
+    "UPDATE users SET status = 'Rechazado' WHERE username = ?";
+
+  // First, check if the user exists and is not already approved
+  db.query(selectQuery, [username], (err, data) => {
+    if (err) return res.status(500).json(err);
+    if (data.length === 0)
+      return res.status(404).json("No se encontró usuario con ese nombre");
+
+    const user = data[0];
+    // if (user.status === "Aprobado") {
+    //   return res.status(409).json("El usuario ya está aprobado."); // User is already approved
+    // }
+
+    // If the user is not already approved, update the 'approved' field to true
+    db.query(updateQuery, [username], (err, result) => {
+      if (err) return res.status(500).json(err);
+
+      // Check if any rows were affected by the update query
+      if (result.affectedRows === 0) {
+        return res.status(404).json("Usuario no encontrado"); // User may not have been found in the database
+      }
+
+      // If the 'approved' field is successfully updated to true
+      sendMail(emailUser, subjectUser, contentUser);
+      return res.status(200).json("El usuario ha sido rechazado.");
+    });
+  });
+}
+
+
+
+
 
 export const soporte = (req, res) => {
   console.log(req.body);
@@ -573,9 +632,10 @@ export const soporte = (req, res) => {
 
 export const deleteUser = (req, res) => {
   const username = req.body.username;
+ 
   
   const emailUser = [req.body.email];
-  const contentUser = `<h1>¡Hola ${req.body.username}, tu solicitud de registro ha sido rechazada!</h1> <p>Nuestro equipo reviso tu solicitud y no cumple con las normas y requerimentos necesarios para su aprobación.</p>`;
+  const contentUser = `<h1>¡Hola ${req.body.username}, tu usuario ha sido eliminado de nuestro sistema!</h1> <p>Nuestro equipo reviso tu solicitud y no cumple con las normas y requerimentos necesarios.</p>`;
   const subjectUser = "ESTADO DE SOLICITUD UATRE BENEFICIOS";
 
   const selectQuery = "SELECT * FROM users WHERE username = ?";
@@ -596,7 +656,7 @@ export const deleteUser = (req, res) => {
       }
 
       // If the user is successfully deleted
-      return res.status(200).json("El usuario ha sido rechazado.");
+      return res.status(200).json("El usuario ha sido eliminado.");
     });
     sendMail(emailUser, subjectUser, contentUser);
   });

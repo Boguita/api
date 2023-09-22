@@ -1,5 +1,5 @@
 import express from "express"
-import { approveUser, beneficiosOtorgados, comprobarAfiliados, deleteUser, getAfiliado, getAllAfiliados, getAllUsers, getUsers, registerAfiliate, registerFamiliar, soporte, updateUsers } from "../controllers/user.js";
+import { approveUser, beneficiosOtorgados, comprobarAfiliados, declineUser, deleteAfiliado, deleteUser, getAfiliado, getAllAfiliados, getAllUsers, getUsers, registerAfiliate, registerFamiliar, soporte, updateUsers } from "../controllers/user.js";
 import multer from "multer";
 const router = express.Router()
 const plainDataMulter = multer().none();
@@ -13,6 +13,8 @@ router.post("/users/update/:id", updateUsers);
 
 router.get("/afiliados", getAllAfiliados);
 
+router.delete("/afiliados/:id", deleteAfiliado);
+
 router.get("/afiliados/:dni", getAfiliado);
 
 router.get("/comprobar-afiliado/:dni", comprobarAfiliados);
@@ -21,7 +23,9 @@ router.get("/comprobar-afiliado/:dni", comprobarAfiliados);
 
 router.post("/afiliado-registro", plainDataMulter, registerAfiliate);
 
-router.post("/approved", approveUser);
+router.put("/approved", approveUser);
+
+router.put("/decline", declineUser);
 
 router.delete("/delete", deleteUser);
 
