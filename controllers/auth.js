@@ -162,7 +162,9 @@ export const loginAdmin = (req, res) => {
     );
 
     if (!isPasswordCorrect)
-      return res.status(400).json("Wrong username or password!");
+      return res
+        .status(400)
+        .json("El usuario y/o la contraseña son incorrectos");
 
     const token = jwt.sign({ id: data[0].id }, "jwtkey");
     const { password, ...other } = data[0];

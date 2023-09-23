@@ -5,7 +5,11 @@ import {
   getBeneficios,
   getBeneficiosByDni,
  
+  getKitEscolar,
+ 
   getKitEscolarExcel,
+ 
+  getKitMaternal,
  
   getKitMaternalExcel,
  
@@ -19,6 +23,8 @@ const router = express.Router();
 
 router.get("/", getBeneficios);
 router.get("/luna-de-miel", getLunaDeMiel);
+router.get("/kit-maternal", getKitMaternal);
+router.get("/kit-escolar", getKitEscolar);
 router.post("/", otorgarBeneficio);
 router.get("/beneficio/:dni", getBeneficiosByDni);
 router.get("/verified-kit-escolar/:familiar_ids", comprobarBeneficios);

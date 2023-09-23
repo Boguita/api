@@ -615,6 +615,8 @@ export const getLunaDeMiel = (req, res) =>
       beneficios_otorgados.tipo,
       beneficios_otorgados.detalles,
       beneficios_otorgados.estado,
+      beneficios_otorgados.usuario_otorgante,
+      beneficios_otorgados.constancia_img,
       luna_de_miel.numero_libreta,     
       beneficios_otorgados.fecha_otorgamiento,
       beneficios_otorgados.afiliado_id,
@@ -623,8 +625,11 @@ export const getLunaDeMiel = (req, res) =>
       familiares.dni AS familiar_dni,
       familiares.tel AS familiar_tel,
       familiares.categoria AS familiar_categoria,
+      familiares.libreta_img,
       afiliados.name AS afiliado_name,
-      afiliados.dni AS afiliado_dni
+      afiliados.dni AS afiliado_dni,
+      afiliados.tel AS afiliado_tel,
+      afiliados.correo AS afiliado_correo
     FROM
       beneficios_otorgados
     LEFT JOIN
@@ -645,6 +650,100 @@ export const getLunaDeMiel = (req, res) =>
   });
 };
 
+export const getKitMaternal = (req, res) => {
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
+      beneficios_otorgados.usuario_otorgante,
+      beneficios_otorgados.plazo,
+      beneficios_otorgados.constancia_img,
+      kit_maternal.semanas,
+      kit_maternal.fecha_de_parto,
+      kit_maternal.cantidad,
+      kit_maternal.certificado,     
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      familiares.libreta_img,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni,
+      afiliados.tel AS afiliado_tel,
+      afiliados.correo AS afiliado_correo
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      kit_maternal ON beneficios_otorgados.id = kit_maternal.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.tipo = 'Kit maternal'
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+    return res.status(200).json(results);
+  });
+};
+
+
+export const getKitEscolar = (req, res) => {
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.estado,
+      beneficios_otorgados.usuario_otorgante,  
+      beneficios_otorgados.constancia_img,
+      kit_escolar.año_escolar,
+      kit_escolar.utiles,
+      kit_escolar.mochila,      
+      kit_escolar.guardapolvo,
+      kit_escolar.guardapolvo_confirm,     
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      familiares.dni_img_frente,
+      familiares.dni_img_dorso,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni,
+      afiliados.tel AS afiliado_tel,
+      afiliados.correo AS afiliado_correo
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      kit_escolar ON beneficios_otorgados.id = kit_escolar.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.tipo = 'Kit escolar'
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+    return res.status(200).json(results);
+  });
+};
+
 
 export const comprobarBeneficioKitMaternal = (req, res) => {
   const familiarId = req.params.familiar_id;
@@ -655,7 +754,7 @@ export const comprobarBeneficioKitMaternal = (req, res) => {
     FROM beneficios_otorgados
     WHERE familiar_id = ?
       AND tipo = 'Kit maternal'
-      AND estado = 'Pendiente'
+      AND estado = 'Aprobado'
   `;
 
   db.query(query, [familiarId], (err, results) => {
