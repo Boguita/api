@@ -1438,6 +1438,7 @@ export const otorgarBeneficio = (req, res) => {
     WHERE
       afiliado_id = ?
       AND tipo = 'Kit maternal'
+      AND estado = 'Entregado'
       AND YEAR(fecha_otorgamiento) = ?`;
 
               db.query(
