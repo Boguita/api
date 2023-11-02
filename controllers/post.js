@@ -656,6 +656,7 @@ export const getKitMaternal = (req, res) => {
       beneficios_otorgados.id,
       beneficios_otorgados.tipo,
       beneficios_otorgados.detalles,
+      beneficios_otorgados.seccional,
       beneficios_otorgados.estado,
       beneficios_otorgados.usuario_otorgante,
       beneficios_otorgados.plazo,
@@ -703,6 +704,7 @@ export const getKitEscolar = (req, res) => {
       beneficios_otorgados.id,
       beneficios_otorgados.tipo,
       beneficios_otorgados.detalles,
+      beneficios_otorgados.seccional,
       beneficios_otorgados.estado,
       beneficios_otorgados.usuario_otorgante,  
       beneficios_otorgados.constancia_img,
@@ -754,7 +756,7 @@ export const comprobarBeneficioKitMaternal = (req, res) => {
     FROM beneficios_otorgados
     WHERE familiar_id = ?
       AND tipo = 'Kit maternal'
-      AND estado = 'Aprobado'
+      AND estado = 'Pendiente'
   `;
 
   db.query(query, [familiarId], (err, results) => {
@@ -802,6 +804,138 @@ export const updateEstadoBeneficio = (req, res) => {
     return res.status(200).json({ message: "Estado actualizado", ids: [beneficioId] });
   });
 };
+
+
+export const createSeccional = (req, res) => {
+  const { nombre, provincia, ciudad } = req.body;
+
+  // Iniciar una transacción
+  db.beginTransaction((err) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error al iniciar la transacción" });
+    }
+
+    // Consulta para insertar la nueva seccional en seccionales
+    const seccionalQuery = `
+      INSERT INTO seccionales (nombre, provincia, ciudad)
+      VALUES (?, ?, ?)
+    `;
+
+    // Consulta para establecer el stock inicial en 0 en kit_escolar_stock
+    const escolarStockQuery = `
+      INSERT INTO kit_escolar_stock (idStock, seccional)
+      VALUES (LAST_INSERT_ID(), ?)
+    `;
+
+    // Consulta para establecer el stock inicial en 0 en kit_maternal_stock
+    const maternalStockQuery = `
+      INSERT INTO kit_maternal_stock (idStock, seccional)
+      VALUES (LAST_INSERT_ID(), ?)
+    `;
+
+    // Ejecutar la consulta de la seccional
+    db.query(seccionalQuery, [nombre, provincia, ciudad], (err, results) => {
+      if (err) {
+        // Si hay un error, hacer rollback de la transacción
+        return db.rollback(() => {
+          console.log(err);
+          return res.status(500).json({ error: "Error al crear la seccional" });
+        });
+      }
+
+      // Ejecutar la consulta para establecer el stock inicial en kit_escolar_stock
+      db.query(escolarStockQuery, nombre, (err, stockResults) => {
+        if (err) {
+          // Si hay un error, hacer rollback de la transacción
+          return db.rollback(() => {
+            console.log(err);
+            return res
+              .status(500)
+              .json({
+                error:
+                  "Error al actualizar el stock de la seccional (kit escolar)",
+              });
+          });
+        }
+
+        // Ejecutar la consulta para establecer el stock inicial en kit_maternal_stock
+        db.query(maternalStockQuery, nombre, (err, stockResults) => {
+          if (err) {
+            // Si hay un error, hacer rollback de la transacción
+            return db.rollback(() => {
+              console.log(err);
+              return res
+                .status(500)
+                .json({
+                  error:
+                    "Error al actualizar el stock de la seccional (kit maternal)",
+                });
+            });
+          }
+
+          // Si todas las consultas son exitosas, hacer commit de la transacción
+          db.commit((err) => {
+            if (err) {
+              // Si hay un error, hacer rollback de la transacción
+              return db.rollback(() => {
+                console.log(err);
+                return res
+                  .status(500)
+                  .json({ error: "Error al completar la transacción" });
+              });
+            }
+
+            // Enviar respuesta exitosa si la transacción se completa con éxito
+            return res
+              .status(200)
+              .json({
+                message:
+                  "Seccional creada y stock inicializado en kit_escolar_stock y kit_maternal_stock",
+              });
+          });
+        });
+      });
+    });
+  });
+};
+
+
+
+export const deleteSeccional = (req,res) => {
+  const { id } = req.params;
+
+  const query = `
+    DELETE FROM seccionales
+    WHERE idseccionales = ?
+  `;
+  db.query(query, [id], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error al eliminar la seccional" });
+    }
+
+    return res.status(200).json({ message: "Seccional eliminada" });
+  });
+}
+
+export const getSeccionales = (req, res) => {
+
+  const query = `
+    SELECT *
+    FROM
+    seccionales 
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error al obtener seccionales" });
+    }
+
+    return res.status(200).json(results);
+  });
+};
+
 
 
 
@@ -856,6 +990,384 @@ export const comprobarBeneficios = (req, res) => {
   // });
 };
 
+export const comprobarStockMaternal = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) return res.status(401).json("No autenticado");
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+     if (err) {
+       return res.status(403).json("Token no válido");
+     }
+    // const { seccional, cantidad } = req.body;
+    const seccional = req.params.seccional;
+
+    console.log(seccional)
+
+     const query = `
+      SELECT seccionales.*, kit_maternal_stock.*
+      FROM seccionales
+      LEFT JOIN kit_maternal_stock ON seccionales.idseccionales = kit_maternal_stock.idStock
+      WHERE seccionales.idseccionales = ?
+    `;
+
+    db.query(query, [seccional], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error en el servidor" });
+      }
+
+      const stockMaternal = results[0];
+
+      if (stockMaternal <= 0) {
+        return res.status(200).json({ stock: 0 });
+      }
+
+      return res.status(200).json({ stockMaternal });
+
+
+    });
+  });
+}
+
+export const stockMaternalProvincia = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) return res.status(401).json("No autenticado");
+
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+    if (err) {
+      return res.status(403).json("Token no válido");
+    }
+    const provincia = req.params.provincia; // Obtener el nombre de la provincia desde los parámetros
+
+    const query = `
+      SELECT kit_maternal_stock.*
+      FROM kit_maternal_stock
+      INNER JOIN seccionales ON kit_maternal_stock.idStock = seccionales.idseccionales
+      WHERE seccionales.provincia = ?
+    `;
+
+    db.query(query, [provincia], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error en el servidor" });
+      }
+
+      const stocks = results;
+      if (!stocks || stocks.length === 0) {
+        return res.status(404).json({
+          error:
+            "No se encontraron registros de stock para la provincia especificada",
+        });
+      }
+
+      // Calcular sumas de cada tipo de stock
+      const sumas = {
+        cantidad: 0,    
+      };
+
+      stocks.forEach((stock) => {
+        Object.keys(sumas).forEach((key) => {
+          if (stock[key]) {
+            sumas[key] += stock[key];
+          }
+        });
+      });
+
+      return res.status(200).json({ sumas });
+    });
+  });
+};
+
+export const comprobarStockEscolar = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) return res.status(401).json("No autenticado");
+
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+    if (err) {
+      return res.status(403).json("Token no válido");
+    }
+
+    const seccionalId = req.params.seccional; // Obtener el ID de la seccional desde los parámetros
+
+    const query = `
+      SELECT seccionales.*, kit_escolar_stock.*
+      FROM seccionales
+      LEFT JOIN kit_escolar_stock ON seccionales.idseccionales = kit_escolar_stock.idStock
+      WHERE seccionales.idseccionales = ?
+    `;
+
+    db.query(query, [seccionalId], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error en el servidor" });
+      }
+
+      const seccional = results[0]; // Suponiendo que solo esperas un resultado, toma el primer elemento del array
+
+      if (!seccional) {
+        return res.status(404).json({ error: "Seccional no encontrada" });
+      }
+
+      return res.status(200).json({ seccional });
+    });
+  });
+};
+
+export const stockEscolarProvincia = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) return res.status(401).json("No autenticado");
+
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+    if (err) {
+      return res.status(403).json("Token no válido");
+    }
+    const provincia = req.params.provincia; // Obtener el nombre de la provincia desde los parámetros
+
+    const query = `
+      SELECT kit_escolar_stock.*
+      FROM kit_escolar_stock
+      INNER JOIN seccionales ON kit_escolar_stock.idStock = seccionales.idseccionales
+      WHERE seccionales.provincia = ?
+    `;
+
+    db.query(query, [provincia], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error en el servidor" });
+      }
+
+      const stocks = results;
+      if (!stocks || stocks.length === 0) {
+        return res
+          .status(404)
+          .json({
+            error:
+              "No se encontraron registros de stock para la provincia especificada",
+          });
+      }
+
+      // Calcular sumas de cada tipo de stock
+      const sumas = {       
+        mochila: 0,
+        utiles: 0,
+        talle6: 0,
+        talle8: 0,
+        talle10: 0,
+        talle12: 0,
+        talle14: 0,
+        talle16: 0,
+        talle18: 0,
+      };
+
+      stocks.forEach((stock) => {
+        Object.keys(sumas).forEach((key) => {
+          if (stock[key]) {
+            sumas[key] += stock[key];
+          }
+        });
+      });
+
+      return res.status(200).json({ sumas });
+    });
+  });
+};
+
+export const editStockMaternal = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) return res.status(401).json("No autenticado");
+
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+    if (err) {
+      return res.status(403).json("Token no válido");
+    }
+
+    // Obtiene los IDs de seccionales del parámetro de la ruta
+    const idseccionales = req.params.seccionales
+      .split(",")
+      .map((id) => parseInt(id.trim()));
+
+      console.log("esta es la id",idseccionales)
+
+    const { funcion, cantidad } = req.body;
+
+    console.log(cantidad, funcion)
+
+    if(funcion === "sumar"){
+      const query = `
+      UPDATE kit_maternal_stock
+      SET cantidad = COALESCE(cantidad, 0) + ?
+      WHERE idStock IN (?)
+    `;
+    db.query(query, [cantidad, [...idseccionales]], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error al actualizar el stock" });
+      }
+      console.log(results);
+      return res.status(200).json({ message: "Stock actualizado" });
+    });
+  } else if(funcion === "restar"){
+    const query = `
+      UPDATE kit_maternal_stock
+      SET cantidad = COALESCE(cantidad, 0) - ?
+      WHERE idStock IN (?)
+    `;
+    db.query(query, [cantidad, [...idseccionales]], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error al actualizar el stock" });
+      }
+      console.log(results);
+      return res.status(200).json({ message: "Stock actualizado" });
+    });
+  }
+  });
+};
+
+
+
+
+
+export const editStockEscolar = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) return res.status(401).json("No autenticado");
+
+  jwt.verify(token, "jwtkey", (err, userInfo) => {
+    if (err) {
+      return res.status(403).json("Token no válido");
+    }
+
+    // Obtiene los IDs de seccionales del parámetro de la ruta
+    const idseccionales = req.params.seccionales
+      .split(",")
+      .map((id) => parseInt(id.trim()));
+
+    const { guardapolvo, talles, utiles, mochila, funcion } = req.body;
+    const guardapolvoNum = parseFloat(guardapolvo);
+    const utilesNum = parseFloat(utiles);
+    const mochilaNum = parseFloat(mochila);
+
+   
+
+    if(funcion === "sumar"){
+       let talleColumns = talles
+         .reduce((acc, talle) => {
+           acc.push(`${talle} = COALESCE(${talle}, 0) + ?`);
+           return acc;
+         }, [])
+         .join(", ");
+
+       let talleValues = talles.map(() => guardapolvoNum);
+       talleValues.push(utilesNum, mochilaNum);
+
+       console.log("ID Seccionales:", idseccionales);
+       console.log("Talle Columns:", talleColumns);
+       console.log("Talle Values:", talleValues);
+    const query = `
+      UPDATE kit_escolar_stock
+      SET ${talleColumns}, utiles = COALESCE(utiles, 0) + ?, mochila = COALESCE(mochila, 0) + ?
+      WHERE idStock IN (?)
+    `;
+
+    db.query(query, [...talleValues, ...idseccionales], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error al actualizar el stock" });
+      }
+      console.log(results);
+      return res.status(200).json({ message: "Stock actualizado" });
+    });
+  }  else if(funcion === "restar"){
+     let talleColumns = talles
+       .reduce((acc, talle) => {
+         acc.push(`${talle} = COALESCE(${talle}, 0) - ?`);
+         return acc;
+       }, [])
+       .join(", ");
+
+     let talleValues = talles.map(() => guardapolvoNum);
+     talleValues.push(utilesNum, mochilaNum);
+
+     console.log("ID Seccionales:", idseccionales);
+     console.log("Talle Columns:", talleColumns);
+     console.log("Talle Values:", talleValues);
+    const query = `
+      UPDATE kit_escolar_stock
+      SET ${talleColumns}, utiles = COALESCE(utiles, 0) - ?, mochila = COALESCE(mochila, 0) - ?
+      WHERE idStock IN (?)
+    `;
+
+    db.query(query, [...talleValues, ...idseccionales], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ error: "Error al actualizar el stock" });
+      }
+      console.log(results);
+      return res.status(200).json({ message: "Stock actualizado" });
+    });
+  }
+  });
+  };
+
+  export const editStockEscolarIndividual = (req, res) => {
+    const token = req.cookies.access_token;
+    if (!token) return res.status(401).json("No autenticado");
+
+    jwt.verify(token, "jwtkey", (err, userInfo) => {
+      if (err) {
+        return res.status(403).json("Token no válido");
+      }
+
+      const idseccionales = req.params.seccionales
+        .split(",")
+        .map((id) => parseInt(id.trim()));
+      const { talles, utiles, mochila } = req.body;
+      const utilesNum = parseFloat(utiles);
+      const mochilaNum = parseFloat(mochila);
+
+      // Construye la consulta SQL para actualizar los talles de guardapolvo individualmente
+      let talleColumns = talles
+        .reduce((acc, talle) => {
+          // Agrupa los talles y cuenta cuántas veces aparece en el array, luego resta esa cantidad del stock
+          const count = talles.filter((t) => t === talle).length;
+          acc.push(`${talle} = COALESCE(${talle}, 0) - ${count}`);
+          return acc;
+        }, [])
+        .join(", ");
+
+      const query = `
+      UPDATE kit_escolar_stock
+      SET ${talleColumns.length > 0 ? talleColumns + "," : ""} utiles = COALESCE(utiles, 0) - ?,
+      mochila = COALESCE(mochila, 0) - ?
+      WHERE idStock IN (?)
+    `;
+
+      db.query(
+        query,
+        [utilesNum, mochilaNum, ...idseccionales],
+        (err, results) => {
+          if (err) {
+            console.log(err);
+            return res
+              .status(500)
+              .json({ error: "Error al actualizar el stock" });
+          }
+          console.log(results);
+          return res.status(200).json({ message: "Stock actualizado" });
+        }
+      );
+    });
+  };
+
+
+
+
+
+
+
+
+
+
+
 
 export const otorgarBeneficio = (req, res) => {
   // // const token = req.cookies.access_token;
@@ -879,46 +1391,47 @@ export const otorgarBeneficio = (req, res) => {
 
       const insertedIds = [];
 
-      function insertBeneficio(index) {
-        if (index >= beneficiosKeys.length) {
-          db.commit(function (err) {
-            if (err) {
-              db.rollback(function () {
-                console.log(err);
-                return res.status(500).json({ error: "Error en el servidor" });
+          function insertBeneficio(index) {
+            if (index >= beneficiosKeys.length) {
+              db.commit(function (err) {
+                if (err) {
+                  db.rollback(function () {
+                    console.log(err);
+                    res.status(500).json({ error: "Error en el servidor" });
+                  });
+                } else {
+                  res.status(200).json({
+                    ids: insertedIds,
+                    message: "Beneficios otorgados exitosamente",
+                  });
+                }
               });
+              return;
             }
 
-            return res.status(200).json({
-              ids: insertedIds,
-              message: "Beneficios otorgados exitosamente",
-            });
-          });
-          return;
-        }
+            const beneficioKey = beneficiosKeys[index];
+            console.log("beneficiosData completo:", beneficiosData);
+            const beneficio = beneficiosData[beneficioKey];
+            console.log("Beneficio completo", beneficio);
 
-        const beneficioKey = beneficiosKeys[index];
-        const beneficio = beneficiosData[beneficioKey];
-        console.log(beneficio);
+            const {
+              usuario_otorgante,
+              seccional_id,
+              tipo,
+              afiliado_id,
+              familiar_id,
+              detalles,
+              seccional,
+              estado,
+            } = beneficio;
 
-        const {
-          tipo,
-          afiliado_id,
-          familiar_id,
-          detalles,
-          usuario_otorgante,
-          estado,
-        } = beneficio;
+            const usuarioOtorgante = usuario_otorgante;
+            const añoActual = new Date().getFullYear();
+            // Comprobación para Kit Maternal
+            if (tipo === "Kit maternal") {
+              const fechaParto = new Date(beneficio.fecha_de_parto);
 
-        const usuarioOtorgante = usuario_otorgante;
-        const añoActual = new Date().getFullYear();
-        // Comprobación para Kit Maternal
-        if (tipo === "Kit maternal") {
-          console.log(beneficio.fecha_de_parto);
-          const fechaParto = new Date(beneficio.fecha_de_parto);
-          console.log(fechaParto);
-
-          const checkBeneficioQuery = `
+              const checkBeneficioQuery = `
     SELECT COUNT(*) AS count
     FROM
       beneficios_otorgados 
@@ -927,53 +1440,120 @@ export const otorgarBeneficio = (req, res) => {
       AND tipo = 'Kit maternal'
       AND YEAR(fecha_otorgamiento) = ?`;
 
-          db.query(
-            checkBeneficioQuery,
-            [ beneficio.afiliado_id, añoActual],
-            function (err, results) {
-              if (err) {
-                db.rollback(function () {
-                  console.log(err);
-                  return res
-                    .status(500)
-                    .json({ error: "Error en el servidor" });
-                });
-              }
+              db.query(
+                checkBeneficioQuery,
+                [beneficio.afiliado_id, añoActual],
+                function (err, results) {
+                  if (err) {
+                    db.rollback(function () {
+                      console.log(err);
+                      return res
+                        .status(500)
+                        .json({ error: "Error en el servidor" });
+                    });
+                  }
 
-              console.log(results);
+                  console.log(results);
 
-              const count = results[0].count;
+                  const count = results[0].count;
 
-              if (count > 0) {
-                return res.status(400).json({
-                  error:
-                    "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 12 meses.",
-                });
-              }
+                  if (count > 0) {
+                    return res.status(400).json({
+                      error:
+                        "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 12 meses.",
+                    });
+                  }
 
-              // Si la comprobación pasa, proceder a insertar en beneficios_otorgados
+                  // Si la comprobación pasa, proceder a insertar en beneficios_otorgados
+                  const beneficioOtorgado = {
+                    tipo,
+                    afiliado_id,
+                    familiar_id,
+                    detalles,
+                    seccional,
+                    usuario_otorgante: usuarioOtorgante,
+                    estado,
+                  };
+
+                  // Calcular la diferencia en meses entre la fecha actual y la fecha de parto
+                  const hoy = new Date();
+                  const diferenciaMeses =
+                    fechaParto.getMonth() -
+                    hoy.getMonth() +
+                    12 * (fechaParto.getFullYear() - hoy.getFullYear());
+
+                  // Si quedan 3 o menos meses para el parto, establecer plazo en "Urgente," de lo contrario, en "Normal"
+                  if (diferenciaMeses <= 3) {
+                    beneficioOtorgado.plazo = "Urgente";
+                  } else {
+                    beneficioOtorgado.plazo = "Normal";
+                  }
+
+                  const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
+                  db.query(
+                    insertQuery,
+                    beneficioOtorgado,
+                    function (err, insertResult) {
+                      if (err) {
+                        db.rollback(function () {
+                          console.log(err);
+                          return res
+                            .status(500)
+                            .json({ error: "Error en el servidor" });
+                        });
+                      }
+
+                      if (insertResult && insertResult.insertId) {
+                        insertedIds.push(insertResult.insertId);
+
+                        const kitMaternalInfo = {
+                          beneficio_otorgado_id: insertResult.insertId,
+                          semanas: beneficio.semanas,
+                          cantidad: beneficio.cantidad,
+                          fecha_de_parto: beneficio.fecha_de_parto,
+                          certificado: beneficio.certificado,
+                        };
+
+                        const insertKitMaternalQuery =
+                          "INSERT INTO kit_maternal SET ?";
+                        db.query(
+                          insertKitMaternalQuery,
+                          kitMaternalInfo,
+                          function (err) {
+                            if (err) {
+                              db.rollback(function () {
+                                console.log(err);
+                                return res
+                                  .status(500)
+                                  .json({ error: "Error en el servidor" });
+                              });
+                            }
+
+                            insertBeneficio(index + 1);
+                          }
+                        );
+                      } else {
+                        db.rollback(function () {
+                          return res
+                            .status(500)
+                            .json({ error: "Error en el servidor" });
+                        });
+                      }
+                    }
+                  );
+                }
+              );
+            } else {
+              // Si no es Kit Maternal, proceder a insertar en beneficios_otorgados
               const beneficioOtorgado = {
                 tipo,
                 afiliado_id,
                 familiar_id,
                 detalles,
+                seccional,
                 usuario_otorgante: usuarioOtorgante,
                 estado,
               };
-
-              // Calcular la diferencia en meses entre la fecha actual y la fecha de parto
-              const hoy = new Date();
-              const diferenciaMeses =
-                fechaParto.getMonth() -
-                hoy.getMonth() +
-                12 * (fechaParto.getFullYear() - hoy.getFullYear());
-
-              // Si quedan 3 o menos meses para el parto, establecer plazo en "Urgente," de lo contrario, en "Normal"
-              if (diferenciaMeses <= 3) {
-                beneficioOtorgado.plazo = "Urgente";
-              } else {
-                beneficioOtorgado.plazo = "Normal";
-              }
 
               const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
               db.query(
@@ -992,32 +1572,66 @@ export const otorgarBeneficio = (req, res) => {
                   if (insertResult && insertResult.insertId) {
                     insertedIds.push(insertResult.insertId);
 
-                    const kitMaternalInfo = {
-                      beneficio_otorgado_id: insertResult.insertId,
-                      semanas: beneficio.semanas,
-                      cantidad: beneficio.cantidad,
-                      fecha_de_parto: beneficio.fecha_de_parto,
-                      certificado: beneficio.certificado,
-                    };
+                    // Insertar en la tabla específica de acuerdo al tipo de beneficio
+                    if (tipo === "Kit escolar") {
+                      const kitEscolarInfo = {
+                        beneficio_otorgado_id: insertResult.insertId,
+                        mochila: beneficio.mochila,
+                        guardapolvo: beneficio.guardapolvo,
+                        guardapolvo_confirm: beneficio.guardapolvo_confirm,
+                        utiles: beneficio.utiles,
+                        año_escolar: beneficio.año_escolar,
+                      };
 
-                    const insertKitMaternalQuery =
-                      "INSERT INTO kit_maternal SET ?";
-                    db.query(
-                      insertKitMaternalQuery,
-                      kitMaternalInfo,
-                      function (err) {
-                        if (err) {
-                          db.rollback(function () {
-                            console.log(err);
-                            return res
-                              .status(500)
-                              .json({ error: "Error en el servidor" });
-                          });
+                      const insertKitEscolarQuery =
+                        "INSERT INTO kit_escolar SET ?";
+                      db.query(
+                        insertKitEscolarQuery,
+                        kitEscolarInfo,
+                        function (err) {
+                          if (err) {
+                            db.rollback(function () {
+                              console.log(err);
+                              return res
+                                .status(500)
+                                .json({ error: "Error en el servidor" });
+                            });
+                          }
+
+                          insertBeneficio(index + 1);
                         }
+                      );
+                    } else if (tipo === "Luna de miel") {
+                      const lunaDeMielInfo = {
+                        beneficio_otorgado_id: insertResult.insertId,
+                        numero_libreta: beneficio.numero_libreta,
+                      };
 
-                        insertBeneficio(index + 1);
-                      }
-                    );
+                      const insertLunaDeMielQuery =
+                        "INSERT INTO luna_de_miel SET ?";
+                      db.query(
+                        insertLunaDeMielQuery,
+                        lunaDeMielInfo,
+                        function (err) {
+                          if (err) {
+                            db.rollback(function () {
+                              console.log(err);
+                              return res
+                                .status(500)
+                                .json({ error: "Error en el servidor" });
+                            });
+                          }
+                        }
+                      );
+
+                      insertBeneficio(index + 1);
+                    } else {
+                      db.rollback(function () {
+                        return res
+                          .status(400)
+                          .json({ error: "Tipo de beneficio desconocido" });
+                      });
+                    }
                   } else {
                     db.rollback(function () {
                       return res
@@ -1028,107 +1642,7 @@ export const otorgarBeneficio = (req, res) => {
                 }
               );
             }
-          );
-        } else {
-          // Si no es Kit Maternal, proceder a insertar en beneficios_otorgados
-          const beneficioOtorgado = {
-            tipo,
-            afiliado_id,
-            familiar_id,
-            detalles,
-            usuario_otorgante: usuarioOtorgante,
-            estado,
-          };
-
-          const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
-          db.query(
-            insertQuery,
-            beneficioOtorgado,
-            function (err, insertResult) {
-              if (err) {
-                db.rollback(function () {
-                  console.log(err);
-                  return res
-                    .status(500)
-                    .json({ error: "Error en el servidor" });
-                });
-              }
-
-              if (insertResult && insertResult.insertId) {
-                insertedIds.push(insertResult.insertId);
-
-                // Insertar en la tabla específica de acuerdo al tipo de beneficio
-                if (tipo === "Kit escolar") {
-                  const kitEscolarInfo = {
-                    beneficio_otorgado_id: insertResult.insertId,
-                    mochila: beneficio.mochila,
-                    guardapolvo: beneficio.guardapolvo,
-                    guardapolvo_confirm: beneficio.guardapolvo_confirm,
-                    utiles: beneficio.utiles,
-                    año_escolar: beneficio.año_escolar,
-                  };
-
-                  const insertKitEscolarQuery = "INSERT INTO kit_escolar SET ?";
-                  db.query(
-                    insertKitEscolarQuery,
-                    kitEscolarInfo,
-                    function (err) {
-                      if (err) {
-                        db.rollback(function () {
-                          console.log(err);
-                          return res
-                            .status(500)
-                            .json({ error: "Error en el servidor" });
-                        });
-                      }
-
-                      insertBeneficio(index + 1);
-                    }
-                  );
-                } else if (tipo === "Luna de miel") {
-                  const lunaDeMielInfo = {
-                    beneficio_otorgado_id: insertResult.insertId,
-                    numero_libreta: beneficio.numero_libreta,
-                  };
-
-
-                  const insertLunaDeMielQuery =
-                    "INSERT INTO luna_de_miel SET ?";
-                  db.query(
-                    insertLunaDeMielQuery,
-                    lunaDeMielInfo,
-                    function (err) {
-                      if (err) {
-                        db.rollback(function () {
-                          console.log(err);
-                          return res
-                            .status(500)
-                            .json({ error: "Error en el servidor" });
-                        });
-                      }
-                    });
-                 
-
-
-                  insertBeneficio(index + 1);
-                } else {
-                  db.rollback(function () {
-                    return res
-                      .status(400)
-                      .json({ error: "Tipo de beneficio desconocido" });
-                  });
-                }
-              } else {
-                db.rollback(function () {
-                  return res
-                    .status(500)
-                    .json({ error: "Error en el servidor" });
-                });
-              }
-            }
-          );
-        }
-      }
+          }
 
       insertBeneficio(0);
     });
@@ -1139,17 +1653,7 @@ export const otorgarBeneficio = (req, res) => {
 
 
 
-export const getAll = (req, res) => {
-  const q = req.query.cat
-    ? "SELECT * FROM tickets WHERE cat=?"
-    : "SELECT * FROM tickets";
 
-  db.query(q, [req.query.cat], (err, data) => {
-    if (err) return res.status(500).send(err);
-
-    return res.status(200).json(data);
-  });
-};
 
 export const getBeneficios = (req, res) => {
   const token = req.cookies.access_token;
@@ -1167,78 +1671,3 @@ export const getBeneficios = (req, res) => {
     });
   });
 };
-export const getPost = (req, res) => {
-  const q =
-    "SELECT p.id, `username`, `title`, `desc`,  `cat`,`date` FROM users u JOIN tickets p ON u.id = p.uid WHERE p.id = ? ";
-// p.img, u.img AS userImg,
-  db.query(q, [req.params.id], (err, data) => {
-    if (err) return res.status(500).json(err);
-
-    return res.status(200).json(data[0]);
-  });
-};
-
-export const addPost = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) return res.status(401).json("Not authenticated!");
-
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
-
-    const q =
-      "INSERT INTO tickets(`title`, `desc`, `cat`, `date`,`uid`) VALUES (?)";
-
-    const values = [
-      req.body.title,
-      req.body.desc,      
-      req.body.cat,
-      req.body.date,
-      userInfo.id,
-    ];
-
-    db.query(q, [values], (err, data) => {
-      if (err) return res.status(500).json(err);
-      return res.json("Post has been created.");
-    });
-  });
-};
-
-export const deletePost = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) return res.status(401).json("Not authenticated!");
-
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
-
-    const postId = req.params.id;
-    const q = "DELETE FROM tickets WHERE `id` = ? AND `uid` = ?";
-
-    db.query(q, [postId, userInfo.id], (err, data) => {
-      if (err) return res.status(403).json("You can delete only your post!");
-
-      return res.json("Post has been deleted!");
-    });
-  });
-};
-
-export const updatePost = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) return res.status(401).json("Not authenticated!");
-
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
-
-    const postId = req.params.id;
-    const q =
-      "UPDATE tickets SET `title`=?,`desc`=?,`cat`=? WHERE `id` = ? AND `uid` = ?";
-
-    const values = [req.body.title, req.body.desc, req.body.cat];
-
-    db.query(q, [...values, postId, userInfo.id], (err, data) => {
-      if (err) return res.status(500).json(err);
-      return res.json("Post has been updated.");
-    });
-  });
-};
-
-
