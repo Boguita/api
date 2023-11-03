@@ -756,7 +756,7 @@ export const comprobarBeneficioKitMaternal = (req, res) => {
     FROM beneficios_otorgados
     WHERE familiar_id = ?
       AND tipo = 'Kit maternal'
-      AND estado = 'Pendiente'
+      AND (estado = 'Pendiente' OR estado = 'Enviado')
   `;
 
   db.query(query, [familiarId], (err, results) => {
