@@ -21,6 +21,8 @@ import {
   editStockEscolarIndividual,
   editStockMaternal,
   stockMaternalProvincia,
+  getStockEscolar,
+  getStockEscolarEnviado,
 } from "../controllers/post.js";
 
 const router = express.Router();
@@ -33,6 +35,8 @@ router.post("/", otorgarBeneficio);
 router.get("/seccionales", getSeccionales);
 router.delete("/seccionales/:id", deleteSeccional);
 router.post("/seccional", createSeccional);
+router.get("/stock", getStockEscolar);
+router.get("/stock-enviado", getStockEscolarEnviado);
 router.get('/stock-maternal/:seccional', comprobarStockMaternal);
 router.get("/stock-maternal-provincia/:provincia", stockMaternalProvincia);
 router.put("/stock-maternal/:seccionales", editStockMaternal);

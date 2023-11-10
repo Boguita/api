@@ -13,7 +13,8 @@ export const getBeneficiosByDni = (req, res) => {
       beneficios_otorgados.estado,
       kit_escolar.mochila,
       kit_escolar.guardapolvo,
-      kit_escolar.utiles,      
+      kit_escolar.utiles,
+      kit_maternal.cantidad,      
       beneficios_otorgados.fecha_otorgamiento,
       beneficios_otorgados.afiliado_id,
       beneficios_otorgados.familiar_id,
@@ -807,7 +808,7 @@ export const updateEstadoBeneficio = (req, res) => {
 
 
 export const createSeccional = (req, res) => {
-  const { nombre, provincia, ciudad } = req.body;
+  const { nombre, provincia, delegacion, direccion, numero } = req.body;
 
   // Iniciar una transacción
   db.beginTransaction((err) => {
@@ -818,8 +819,8 @@ export const createSeccional = (req, res) => {
 
     // Consulta para insertar la nueva seccional en seccionales
     const seccionalQuery = `
-      INSERT INTO seccionales (nombre, provincia, ciudad)
-      VALUES (?, ?, ?)
+      INSERT INTO seccionales (nombre, provincia, delegacion, direccion, numero)
+      VALUES (?, ?, ?, ?, ?)
     `;
 
     // Consulta para establecer el stock inicial en 0 en kit_escolar_stock
@@ -835,7 +836,7 @@ export const createSeccional = (req, res) => {
     `;
 
     // Ejecutar la consulta de la seccional
-    db.query(seccionalQuery, [nombre, provincia, ciudad], (err, results) => {
+    db.query(seccionalQuery, [nombre, provincia, delegacion, direccion, numero], (err, results) => {
       if (err) {
         // Si hay un error, hacer rollback de la transacción
         return db.rollback(() => {
@@ -953,6 +954,10 @@ export const comprobarBeneficios = (req, res) => {
         beneficios_otorgados.id,
         beneficios_otorgados.tipo,
         beneficios_otorgados.detalles,
+        beneficios_otorgados.estado,
+        beneficios_otorgados.plazo,
+        beneficios_otorgados.usuario_otorgante,
+        beneficios_otorgados.constancia_img,
         kit_escolar.año_escolar,
         kit_escolar.mochila,
         kit_escolar.guardapolvo,
@@ -989,6 +994,44 @@ export const comprobarBeneficios = (req, res) => {
     });
   // });
 };
+
+export const getStockEscolar = (req, res) => {
+  const query = `
+    SELECT *
+    FROM kit_escolar_stock
+    INNER JOIN seccionales ON kit_escolar_stock.idStock = seccionales.idseccionales
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res
+        .status(500)
+        .json({ error: "Error al obtener el stock de kit escolar" });
+    }
+
+    return res.status(200).json(results);
+  });
+};
+
+export const getStockEscolarEnviado = (req, res) => {
+  const query = `
+    SELECT *
+    FROM enviados
+    INNER JOIN seccionales ON enviados.idseccionales = seccionales.idseccionales
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res
+        .status(500)
+        .json({ error: "Error al obtener el stock de kit escolar" });
+    }
+
+    return res.status(200).json(results);
+  });
+};
+
+
 
 export const comprobarStockMaternal = (req, res) => {
   const token = req.cookies.access_token;
@@ -1226,87 +1269,168 @@ export const editStockMaternal = (req, res) => {
 
 
 
-
 export const editStockEscolar = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) return res.status(401).json("No autenticado");
+    const token = req.cookies.access_token;
+    if (!token) return res.status(401).json("No autenticado");
 
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) {
-      return res.status(403).json("Token no válido");
-    }
-
-    // Obtiene los IDs de seccionales del parámetro de la ruta
-    const idseccionales = req.params.seccionales
-      .split(",")
-      .map((id) => parseInt(id.trim()));
-
-    const { guardapolvo, talles, utiles, mochila, funcion } = req.body;
-    const guardapolvoNum = parseFloat(guardapolvo);
-    const utilesNum = parseFloat(utiles);
-    const mochilaNum = parseFloat(mochila);
-
-   
-
-    if(funcion === "sumar"){
-       let talleColumns = talles
-         .reduce((acc, talle) => {
-           acc.push(`${talle} = COALESCE(${talle}, 0) + ?`);
-           return acc;
-         }, [])
-         .join(", ");
-
-       let talleValues = talles.map(() => guardapolvoNum);
-       talleValues.push(utilesNum, mochilaNum);
-
-       console.log("ID Seccionales:", idseccionales);
-       console.log("Talle Columns:", talleColumns);
-       console.log("Talle Values:", talleValues);
-    const query = `
-      UPDATE kit_escolar_stock
-      SET ${talleColumns}, utiles = COALESCE(utiles, 0) + ?, mochila = COALESCE(mochila, 0) + ?
-      WHERE idStock IN (?)
-    `;
-
-    db.query(query, [...talleValues, ...idseccionales], (err, results) => {
+    jwt.verify(token, "jwtkey", (err, userInfo) => {
       if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Error al actualizar el stock" });
+        return res.status(403).json("Token no válido");
       }
-      console.log(results);
-      return res.status(200).json({ message: "Stock actualizado" });
-    });
-  }  else if(funcion === "restar"){
-     let talleColumns = talles
-       .reduce((acc, talle) => {
-         acc.push(`${talle} = COALESCE(${talle}, 0) - ?`);
-         return acc;
-       }, [])
-       .join(", ");
 
-     let talleValues = talles.map(() => guardapolvoNum);
-     talleValues.push(utilesNum, mochilaNum);
+      const idseccionales = req.params.seccionales
+        .split(",")
+        .map((id) => parseInt(id.trim()));
 
-     console.log("ID Seccionales:", idseccionales);
-     console.log("Talle Columns:", talleColumns);
-     console.log("Talle Values:", talleValues);
-    const query = `
-      UPDATE kit_escolar_stock
-      SET ${talleColumns}, utiles = COALESCE(utiles, 0) - ?, mochila = COALESCE(mochila, 0) - ?
-      WHERE idStock IN (?)
-    `;
+      const {
+        guardapolvo,
+        talle6,
+        talle8,
+        talle10,
+        talle12,
+        talle14,
+        talle16,
+        talle18,
+        utiles,
+        mochila,
+        funcion,
+      } = req.body;
+      const guardapolvoNum = parseFloat(guardapolvo);
+      const utilesNum = parseFloat(utiles);
+      const mochilaNum = parseFloat(mochila);
 
-    db.query(query, [...talleValues, ...idseccionales], (err, results) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Error al actualizar el stock" });
+      if (funcion === "sumar") {
+        const idPlaceholders = idseccionales.map(() => "?").join(",");
+        const query = `
+        UPDATE kit_escolar_stock
+        SET talle6 = COALESCE(talle6, 0) + ?,
+            talle8 = COALESCE(talle8, 0) + ?,
+            talle10 = COALESCE(talle10, 0) + ?,
+            talle12 = COALESCE(talle12, 0) + ?,
+            talle14 = COALESCE(talle14, 0) + ?,
+            talle16 = COALESCE(talle16, 0) + ?,
+            talle18 = COALESCE(talle18, 0) + ?,
+            utiles = COALESCE(utiles, 0) + ?, 
+            mochila = COALESCE(mochila, 0) + ?
+        WHERE idStock IN (${idPlaceholders})
+      `;
+
+        db.query(
+          query,
+          [
+            talle6,
+            talle8,
+            talle10,
+            talle12,
+            talle14,
+            talle16,
+            talle18,
+            utilesNum,
+            mochilaNum,
+            ...idseccionales,
+          ],
+          (err, results) => {
+            if (err) {
+              console.log(err);
+              return res
+                .status(500)
+                .json({ error: "Error al actualizar el stock" });
+            }
+
+            // Iterar sobre todas las IDs de seccionales y realizar la inserción en la tabla "enviados"
+            idseccionales.forEach((idseccional) => {
+              const envioQuery = `
+              INSERT INTO enviados (idseccionales, mochila, utiles, 
+                talle6, talle8, talle10, talle12, talle14, talle16, talle18)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+              const envioValues = [
+                idseccional,
+                mochilaNum,
+                utilesNum,
+                talle6,
+                talle8,
+                talle10,
+                talle12,
+                talle14,
+                talle16,
+                talle18,
+              ];
+
+              db.query(envioQuery, envioValues, (envioErr, envioResults) => {
+                if (envioErr) {
+                  console.log(envioErr);
+                  return res
+                    .status(500)
+                    .json({ error: "Error al registrar el envío" });
+                }
+                console.log(envioResults);
+              });
+            });
+
+            // Enviar respuesta después de completar todas las inserciones
+            return res
+              .status(200)
+              .json({ message: "Stock actualizado y envíos registrados" });
+          }
+        );
+      } else if (funcion === "restar") {
+        const idPlaceholders = idseccionales.map(() => "?").join(",");
+        const query = `
+        UPDATE kit_escolar_stock
+        SET talle6 = COALESCE(talle6, 0) - ?,
+            talle8 = COALESCE(talle8, 0) - ?,
+            talle10 = COALESCE(talle10, 0) - ?,
+            talle12 = COALESCE(talle12, 0) - ?,
+            talle14 = COALESCE(talle14, 0) - ?,
+            talle16 = COALESCE(talle16, 0) - ?,
+            talle18 = COALESCE(talle18, 0) - ?,
+            utiles = COALESCE(utiles, 0) - ?, 
+            mochila = COALESCE(mochila, 0) - ?
+        WHERE idStock IN (${idPlaceholders})
+      `;
+
+        db.query(
+          query,
+          [
+            talle6,
+            talle8,
+            talle10,
+            talle12,
+            talle14,
+            talle16,
+            talle18,
+            utilesNum,
+            mochilaNum,
+            ...idseccionales,
+          ],
+          (err, results) => {
+            if (err) {
+              console.log(err);
+              return res
+                .status(500)
+                .json({ error: "Error al actualizar el stock" });
+            }
+         
+
+            // Enviar respuesta después de completar todas las inserciones
+            return res
+              .status(200)
+              .json({ message: "Stock actualizado y envíos registrados" });
+          }
+        );
+        };
       }
-      console.log(results);
-      return res.status(200).json({ message: "Stock actualizado" });
-    });
-  }
-  });
-  };
+    )};
+
+
+
+
+
+
+
+  
 
   export const editStockEscolarIndividual = (req, res) => {
     const token = req.cookies.access_token;
@@ -1530,7 +1654,7 @@ export const otorgarBeneficio = (req, res) => {
                               });
                             }
 
-                            insertBeneficio(index + 1);
+                            return insertBeneficio(index + 1);
                           }
                         );
                       } else {
@@ -1599,7 +1723,7 @@ export const otorgarBeneficio = (req, res) => {
                             });
                           }
 
-                          insertBeneficio(index + 1);
+                         return insertBeneficio(index + 1);
                         }
                       );
                     } else if (tipo === "Luna de miel") {
@@ -1625,7 +1749,7 @@ export const otorgarBeneficio = (req, res) => {
                         }
                       );
 
-                      insertBeneficio(index + 1);
+                     return insertBeneficio(index + 1);
                     } else {
                       db.rollback(function () {
                         return res
@@ -1645,7 +1769,7 @@ export const otorgarBeneficio = (req, res) => {
             }
           }
 
-      insertBeneficio(0);
+      return insertBeneficio(0);
     });
   // });
 };

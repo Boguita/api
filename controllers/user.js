@@ -522,14 +522,16 @@ export const beneficiosOtorgados = (req, res) => {
 
 export const approveUser = (req, res) => {
   const username = req.body.username;
+  const fecha_aprobacion = new Date(); // Obtén la fecha actual
   const emailUser = [req.body.email];
   const contentUser = `<h1>¡Hola ${req.body.username}, tu solicitud de registro ha sido aprobada!</h1> <p>Nuestro equipo revisó tu solicitud y cumple con las normas y requerimientos necesarios para su aprobación. ¡BIENVENIDO!</p>`;
   const subjectUser = "ESTADO DE SOLICITUD UATRE BENEFICIOS";
 
   const selectQuery = "SELECT * FROM users WHERE username = ?";
-  const updateQuery = "UPDATE users SET status = 'Aprobado' WHERE username = ?";
+  const updateQuery =
+    "UPDATE users SET status = 'Aprobado', fecha_aprobacion = ? WHERE username = ?";
 
-  // First, check if the user exists and is not already approved
+  // Primero, verifica si el usuario existe y aún no está aprobado
   db.query(selectQuery, [username], (err, data) => {
     if (err) return res.status(500).json(err);
     if (data.length === 0)
@@ -537,19 +539,19 @@ export const approveUser = (req, res) => {
 
     const user = data[0];
     if (user.status === "Aprobado") {
-      return res.status(409).json("El usuario ya está aprobado."); // User is already approved
+      return res.status(409).json("El usuario ya está aprobado."); // El usuario ya está aprobado
     }
 
-    // If the user is not already approved, update the 'approved' field to true
-    db.query(updateQuery, [username], (err, result) => {
+    // Si el usuario aún no está aprobado, actualiza el campo 'status' a 'Aprobado' y establece la fecha de aprobación
+    db.query(updateQuery, [fecha_aprobacion, username], (err, result) => {
       if (err) return res.status(500).json(err);
 
-      // Check if any rows were affected by the update query
+      // Verifica si se afectaron filas con la consulta de actualización
       if (result.affectedRows === 0) {
-        return res.status(404).json("Usuario no encontrado"); // User may not have been found in the database
+        return res.status(404).json("Usuario no encontrado"); // Puede que no se haya encontrado al usuario en la base de datos
       }
 
-      // If the 'approved' field is successfully updated to true
+      // Si el campo 'status' se actualiza correctamente a 'Aprobado'
       sendMail(emailUser, subjectUser, contentUser);
       return res.status(200).json("El usuario ha sido aprobado.");
     });
