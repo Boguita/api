@@ -13,7 +13,7 @@ export const register = (req, res) => {
   const contentUser = `<h1>¡Hola, ${req.body.nombre}, te has registrado correctamente email: ${req.body.email}!</h1> <p>Nuestro equipo revisará tu solicitud y te llegará una confirmación en el caso de que tu cuenta haya sido aprobada.</p>`;
   const subjectUser = "BIENVENIDO A UATRE BENEFICIOS";
 
-  if (!req.body.email || !req.body.nombre || !req.body.dni || !req.body.nacionalidad || !req.body.sexo || !req.body.cuit || !req.body.provincia || !req.body.ciudad || !req.body.domicilio || !req.body.tel || !req.body.password || !req.body.repeat_password) {
+  if (!req.body.email || !req.body.nombre || !req.body.dni || !req.body.nacionalidad || !req.body.sexo || !req.body.cuit || !req.body.provincia || !req.body.delegacion || !req.body.seccional || !req.body.domicilio || !req.body.tel || !req.body.password || !req.body.repeat_password) {
     return res.status(409).json("Completa todos los campos requeridos.");
   } else {
     // CHECK EXISTING USER
@@ -29,49 +29,52 @@ export const register = (req, res) => {
         const hash = bcrypt.hashSync(req.body.password, salt);
 
         // Consulta para obtener el nombre de la seccional basándose en el ID
-        const seccionalQuery = "SELECT nombre FROM seccionales WHERE idseccionales = ?";
+const seccionalQuery =
+  "SELECT nombre, direccion FROM seccionales WHERE idseccionales = ?";
 
-        db.query(seccionalQuery, [req.body.seccional], (err, seccionalData) => {
+        db.query(seccionalQuery, [req.body.seccional], (err, data) => {
           if (err) return res.status(500).json(err);
 
           // Verifica si se encontró la seccional en la base de datos
-          if (seccionalData.length) {
-            const seccionalNombre = seccionalData[0].nombre;
+           if (data.length) {
+             const seccionalNombre = data[0].nombre;
+             const direccionNombre = data[0].direccion;
 
-            const newUser = {
-              username: req.body.nombre,
-              email: req.body.email,
-              nacionalidad: req.body.nacionalidad,
-              sexo: req.body.sexo,
-              dni: req.body.dni,
-              cuit: req.body.cuit,
-              provincia: req.body.provincia,
-              ciudad: req.body.ciudad,
-              domicilio: req.body.domicilio,
-              seccional_id: req.body.seccional,
-              seccional: seccionalNombre, // Asigna el nombre de la seccional al usuario
-              tel: req.body.tel,
-              password: hash,
-              status: "Pendiente",
-            };
+             const newUser = {
+               username: req.body.nombre,
+               email: req.body.email,
+               nacionalidad: req.body.nacionalidad,
+               sexo: req.body.sexo,
+               dni: req.body.dni,
+               cuit: req.body.cuit,
+               provincia: req.body.provincia,
+               delegacion: req.body.delegacion,
+               domicilio: req.body.domicilio,
+               seccional_id: req.body.seccional,
+               seccional: seccionalNombre, // Asigna el nombre de la seccional al usuario
+               tel: req.body.tel,
+               direccion: direccionNombre,
+               password: hash,
+               status: "Pendiente",
+             };
 
-            const q = "INSERT INTO users SET ?";
+             const q = "INSERT INTO users SET ?";
 
-            db.query(q, newUser, (err, data) => {
-              if (err) return res.status(500).json(err);
+             db.query(q, newUser, (err, data) => {
+               if (err) return res.status(500).json(err);
 
-              sendMail(emailAdmin, subjectAdmin, contentAdmin);
-              sendMail(emailUser, subjectUser, contentUser);
+               sendMail(emailAdmin, subjectAdmin, contentAdmin);
+               sendMail(emailUser, subjectUser, contentUser);
 
-              return res
-                .status(200)
-                .json(
-                  "El usuario ha sido creado y está pendiente de aprobación."
-                );
-            });
-          } else {
-            return res.status(404).json("Seccional no encontrada");
-          }
+               return res
+                 .status(200)
+                 .json(
+                   "El usuario ha sido creado y está pendiente de aprobación."
+                 );
+             });
+           } else {
+             return res.status(404).json("Seccional no encontrada");
+           }
         });
       } else {
         return res.status(409).json("Las contraseñas no coinciden.");
