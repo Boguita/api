@@ -30,7 +30,7 @@ export const register = (req, res) => {
 
         // Consulta para obtener el nombre de la seccional basándose en el ID
 const seccionalQuery =
-  "SELECT nombre, direccion FROM seccionales WHERE idseccionales = ?";
+  "SELECT nombre, direccion, numero FROM seccionales WHERE idseccionales = ?";
 
         db.query(seccionalQuery, [req.body.seccional], (err, data) => {
           if (err) return res.status(500).json(err);
@@ -39,6 +39,7 @@ const seccionalQuery =
            if (data.length) {
              const seccionalNombre = data[0].nombre;
              const direccionNombre = data[0].direccion;
+             const numero = data[0].numero;
 
              const newUser = {
                username: req.body.nombre,
@@ -53,7 +54,7 @@ const seccionalQuery =
                seccional_id: req.body.seccional,
                seccional: seccionalNombre, // Asigna el nombre de la seccional al usuario
                tel: req.body.tel,
-               direccion: direccionNombre,
+               direccion: direccionNombre + ' N° ' + numero,
                password: hash,
                status: "Pendiente",
              };

@@ -706,6 +706,9 @@ export const getKitEscolar = (req, res) => {
       beneficios_otorgados.tipo,
       beneficios_otorgados.detalles,
       beneficios_otorgados.seccional,
+      beneficios_otorgados.delegacion,
+      beneficios_otorgados.provincia,
+      beneficios_otorgados.direccion,
       beneficios_otorgados.estado,
       beneficios_otorgados.usuario_otorgante,  
       beneficios_otorgados.constancia_img,
@@ -1545,7 +1548,10 @@ export const otorgarBeneficio = (req, res) => {
               afiliado_id,
               familiar_id,
               detalles,
+              provincia,
               seccional,
+              delegacion,
+              direccion,
               estado,
             } = beneficio;
 
@@ -1595,7 +1601,10 @@ export const otorgarBeneficio = (req, res) => {
                     afiliado_id,
                     familiar_id,
                     detalles,
+                    provincia,
                     seccional,
+                    delegacion,
+                    direccion,
                     usuario_otorgante: usuarioOtorgante,
                     estado,
                   };
@@ -1675,7 +1684,10 @@ export const otorgarBeneficio = (req, res) => {
                 afiliado_id,
                 familiar_id,
                 detalles,
+                provincia,
                 seccional,
+                delegacion,
+                direccion,
                 usuario_otorgante: usuarioOtorgante,
                 estado,
               };
