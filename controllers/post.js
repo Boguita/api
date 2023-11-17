@@ -1600,19 +1600,19 @@ export const otorgarBeneficio = (req, res) => {
                     estado,
                   };
 
-                  // Calcular la diferencia en meses entre la fecha actual y la fecha de parto
-                  const hoy = new Date();
-                  const diferenciaMeses =
-                    fechaParto.getMonth() -
-                    hoy.getMonth() +
-                    12 * (fechaParto.getFullYear() - hoy.getFullYear());
+                  // // Calcular la diferencia en meses entre la fecha actual y la fecha de parto
+                  // const hoy = new Date();
+                  // const diferenciaMeses =
+                  //   fechaParto.getMonth() -
+                  //   hoy.getMonth() +
+                  //   12 * (fechaParto.getFullYear() - hoy.getFullYear());
 
-                  // Si quedan 3 o menos meses para el parto, establecer plazo en "Urgente," de lo contrario, en "Normal"
-                  if (diferenciaMeses <= 3) {
-                    beneficioOtorgado.plazo = "Urgente";
-                  } else {
-                    beneficioOtorgado.plazo = "Normal";
-                  }
+                  // // Si quedan 3 o menos meses para el parto, establecer plazo en "Urgente," de lo contrario, en "Normal"
+                  // if (diferenciaMeses <= 3) {
+                  //   beneficioOtorgado.plazo = "Urgente";
+                  // } else {
+                  //   beneficioOtorgado.plazo = "Normal";
+                  // }
 
                   const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
                   db.query(

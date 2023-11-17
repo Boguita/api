@@ -397,30 +397,47 @@ export const registerFamiliar = (req, res) => {
   // jwt.verify(token, "jwtkey", (err, userInfo) => {
   //   if (err) return res.status(403).json("Token is not valid!");
  
-    console.log(req.body);
     const {
-      name,
-      dni,
-      tel,
-      libreta_img,
-      fecha_de_nacimiento,
-      categoria,
-      numero_libreta,
-      id_afiliado,
-    } = req.body;
+    name,
+    dni,
+    tel,
+    libreta_img,
+    fecha_de_nacimiento,
+    categoria,
+    numero_libreta,
+    id_afiliado,
+  } = req.body;
 
-    // Validar que los campos no estén vacíos o nulos
-    if (
-      !name ||
-      !dni ||
-      !tel ||
-      !fecha_de_nacimiento ||
-      !categoria ||
-      !id_afiliado
-    ) {
-      return res.status(400).json({ error: "Campos incompletos" });
+  // Validar que los campos no estén vacíos o nulos
+  if (
+    !name ||
+    !dni ||
+    !tel ||
+    !fecha_de_nacimiento ||
+    !categoria ||
+    !id_afiliado
+  ) {
+    return res.status(400).json({ error: "Campos incompletos" });
+  }
+
+  // Verificar si ya existe un afiliado con el mismo DNI
+  const checkDNIQuery = `
+    SELECT dni
+    FROM familiares
+    WHERE dni = ?
+  `;
+  db.query(checkDNIQuery, [dni, id_afiliado], (err, dniResults) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+    if (dniResults.length > 0) {
+      return res
+        .status(400)
+        .json({ error: "Ya existe un familiar con este DNI registrado." });
     }
 
+    // Si no existe, realizar la inserción del familiar
     const insertQuery = `
       INSERT INTO familiares (name, dni, tel, fecha_de_nacimiento, categoria, numero_libreta, id_afiliado)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -450,6 +467,8 @@ export const registerFamiliar = (req, res) => {
         });
       }
     );
+  });
+
   // });
 };
 
