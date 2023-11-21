@@ -1492,7 +1492,23 @@ export const editStockEscolar = (req, res) => {
 
 
 
+function sendSuccessResponse(res, insertedIds) {
+  res.status(200).json({
+    ids: insertedIds,
+    message: "Beneficios otorgados exitosamente",
+  });
+}
 
+function sendError(res, errorMessage) {
+  console.error(errorMessage);
+  res.status(500).json({ error: errorMessage });
+}
+
+function rollbackAndSendError(res, errorMessage) {
+  db.rollback(() => {
+    sendError(res, errorMessage);
+  });
+}
 
 
 
@@ -1510,59 +1526,49 @@ export const otorgarBeneficio = (req, res) => {
     const beneficiosData = req.body;
     const beneficiosKeys = Object.keys(beneficiosData);
 
-    db.beginTransaction(function (err) {
-      if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Error en el servidor" });
+  db.beginTransaction((err) => {
+    if (err) {
+      console.log(err);
+      return sendError(res, "Error en el servidor");
+    }
+    const insertedIds = [];
+
+    function insertBeneficio(index) {
+      if (index >= beneficiosKeys.length) {
+        db.commit((err) => {
+          if (err) {
+            rollbackAndSendError(res, "Error en el servidor");
+          } else {
+            sendSuccessResponse(res, insertedIds);
+          }
+        });
+        return;
       }
 
-      const insertedIds = [];
+      const beneficioKey = beneficiosKeys[index];
+      console.log("beneficiosData completo:", beneficiosData);
+      const beneficio = beneficiosData[beneficioKey];
+      console.log("Beneficio completo", beneficio);
 
-          function insertBeneficio(index) {
-            if (index >= beneficiosKeys.length) {
-              db.commit(function (err) {
-                if (err) {
-                  db.rollback(function () {
-                    console.log(err);
-                    res.status(500).json({ error: "Error en el servidor" });
-                  });
-                } else {
-                  res.status(200).json({
-                    ids: insertedIds,
-                    message: "Beneficios otorgados exitosamente",
-                  });
-                }
-                return; // Ensure we exit after sending a response
-              });
-              return;
-            }
+      const {
+        usuario_otorgante,
+        seccional_id,
+        tipo,
+        afiliado_id,
+        familiar_id,
+        detalles,
+        provincia,
+        seccional,
+        delegacion,
+        direccion,
+        estado,
+      } = beneficio;
 
-            const beneficioKey = beneficiosKeys[index];
-            console.log("beneficiosData completo:", beneficiosData);
-            const beneficio = beneficiosData[beneficioKey];
-            console.log("Beneficio completo", beneficio);
-
-            const {
-              usuario_otorgante,
-              seccional_id,
-              tipo,
-              afiliado_id,
-              familiar_id,
-              detalles,
-              provincia,
-              seccional,
-              delegacion,
-              direccion,
-              estado,
-            } = beneficio;
-
-            const usuarioOtorgante = usuario_otorgante;
-            const añoActual = new Date().getFullYear();
-            // Comprobación para Kit Maternal
-            if (tipo === "Kit maternal") {
-              const fechaParto = new Date(beneficio.fecha_de_parto);
-
-              const checkBeneficioQuery = `
+      const usuarioOtorgante = usuario_otorgante;
+      const añoActual = new Date().getFullYear();
+      // Comprobación para Kit Maternal
+      if (tipo === "Kit maternal") {
+        const checkBeneficioQuery = `
     SELECT COUNT(*) AS count
     FROM
       beneficios_otorgados 
@@ -1572,207 +1578,186 @@ export const otorgarBeneficio = (req, res) => {
       AND estado = 'Entregado'
       AND YEAR(fecha_otorgamiento) = ?`;
 
-             db.query(
-               insertQuery,
-               beneficioOtorgado,
-               function (err, insertResult) {
-                 if (err) {
-                   db.rollback(function () {
-                     console.log(err);
-                     res.status(500).json({ error: "Error en el servidor" });
-                   });
-                   return; // Ensure we exit after sending a response
-                 }
+        db.query(
+          checkBeneficioQuery,
+          [beneficio.afiliado_id, añoActual],
+          function (err, results) {
+            if (err) {
+              db.rollback(function () {
+                console.log(err);
+                return res.status(500).json({ error: "Error en el servidor" });
+              });
+            }
 
-                 console.log(results);
+            console.log(results);
 
-                 const count = results[0].count;
+            const count = results[0].count;
 
-                 if (count > 0) {
-                   return res.status(400).json({
-                     error:
-                       "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 12 meses.",
-                   });
-                 }
+            if (count > 0) {
+              return res.status(400).json({
+                error:
+                  "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 12 meses.",
+              });
+            }
 
-                 // Si la comprobación pasa, proceder a insertar en beneficios_otorgados
-                 const beneficioOtorgado = {
-                   tipo,
-                   afiliado_id,
-                   familiar_id,
-                   detalles,
-                   provincia,
-                   seccional,
-                   delegacion,
-                   direccion,
-                   usuario_otorgante: usuarioOtorgante,
-                   estado,
-                 };
+            // Si la comprobación pasa, proceder a insertar en beneficios_otorgados
+            const beneficioOtorgado = {
+              tipo,
+              afiliado_id,
+              familiar_id,
+              detalles,
+              provincia,
+              seccional,
+              delegacion,
+              direccion,
+              usuario_otorgante: usuarioOtorgante,
+              estado,
+            };
 
-                 const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
-                 db.query(
-                   insertQuery,
-                   beneficioOtorgado,
-                   function (err, insertResult) {
-                     if (err) {
-                       db.rollback(function () {
-                         console.log(err);
-                         return res
-                           .status(500)
-                           .json({ error: "Error en el servidor" });
-                       });
-                     }
+            const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
+            db.query(
+              insertQuery,
+              beneficioOtorgado,
+              function (err, insertResult) {
+                if (err) {
+                  db.rollback(function () {
+                    console.log(err);
+                    return res
+                      .status(500)
+                      .json({ error: "Error en el servidor" });
+                  });
+                }
 
-                     if (insertResult && insertResult.insertId) {
-                       insertedIds.push(insertResult.insertId);
+                if (insertResult && insertResult.insertId) {
+                  insertedIds.push(insertResult.insertId);
 
-                       const kitMaternalInfo = {
-                         beneficio_otorgado_id: insertResult.insertId,
-                         semanas: beneficio.semanas,
-                         cantidad: beneficio.cantidad,
-                         fecha_de_parto: beneficio.fecha_de_parto,
-                         certificado: beneficio.certificado,
-                       };
+                  const kitMaternalInfo = {
+                    beneficio_otorgado_id: insertResult.insertId,
+                    semanas: beneficio.semanas,
+                    cantidad: beneficio.cantidad,
+                    fecha_de_parto: beneficio.fecha_de_parto,
+                    certificado: beneficio.certificado,
+                  };
 
-                       const insertKitMaternalQuery =
-                         "INSERT INTO kit_maternal SET ?";
-                       db.query(
-                         insertKitMaternalQuery,
-                         kitMaternalInfo,
-                         function (err) {
-                           if (err) {
-                             db.rollback(function () {
-                               console.log(err);
-                               return res
-                                 .status(500)
-                                 .json({ error: "Error en el servidor" });
-                             });
-                           }
-
-                           return insertBeneficio(index + 1);
-                         }
-                       );
-                     } else {
-                       db.rollback(function () {
-                         return res
-                           .status(500)
-                           .json({ error: "Error en el servidor" });
-                       });
-                     }
-                   }
-                 );
-               }
-             );
-            } else {
-              // Si no es Kit Maternal, proceder a insertar en beneficios_otorgados
-              const beneficioOtorgado = {
-                tipo,
-                afiliado_id,
-                familiar_id,
-                detalles,
-                provincia,
-                seccional,
-                delegacion,
-                direccion,
-                usuario_otorgante: usuarioOtorgante,
-                estado,
-              };
-
-              const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
-              db.query(
-                insertQuery,
-                beneficioOtorgado,
-                function (err, insertResult) {
-                  if (err) {
-                    db.rollback(function () {
-                      console.log(err);
-                      return res
-                        .status(500)
-                        .json({ error: "Error en el servidor" });
-                    });
-                  }
-
-                  if (insertResult && insertResult.insertId) {
-                    insertedIds.push(insertResult.insertId);
-
-                    // Insertar en la tabla específica de acuerdo al tipo de beneficio
-                    if (tipo === "Kit escolar") {
-                      const kitEscolarInfo = {
-                        beneficio_otorgado_id: insertResult.insertId,
-                        mochila: beneficio.mochila,
-                        guardapolvo: beneficio.guardapolvo,
-                        guardapolvo_confirm: beneficio.guardapolvo_confirm,
-                        utiles: beneficio.utiles,
-                        año_escolar: beneficio.año_escolar,
-                      };
-
-                      const insertKitEscolarQuery =
-                        "INSERT INTO kit_escolar SET ?";
-                      db.query(
-                        insertKitEscolarQuery,
-                        kitEscolarInfo,
-                        function (err) {
-                          if (err) {
-                            db.rollback(function () {
-                              console.log(err);
-                              res
-                                .status(500)
-                                .json({ error: "Error en el servidor" });
-                            });
-                            return; // Ensure we exit after sending a response
-                          }
-
-                          return insertBeneficio(index + 1);
-                        }
-                      );
-                    } else if (tipo === "Luna de miel") {
-                      const lunaDeMielInfo = {
-                        beneficio_otorgado_id: insertResult.insertId,
-                        numero_libreta: beneficio.numero_libreta,
-                      };
-
-                      const insertLunaDeMielQuery =
-                        "INSERT INTO luna_de_miel SET ?";
-                      db.query(
-                        insertLunaDeMielQuery,
-                        lunaDeMielInfo,
-                        function (err) {
-                          if (err) {
-                            db.rollback(function () {
-                              console.log(err);
-                              return res
-                                .status(500)
-                                .json({ error: "Error en el servidor" });
-                            });
-                          }
-                        }
-                      );
+                  const insertKitMaternalQuery =
+                    "INSERT INTO kit_maternal SET ?";
+                  db.query(
+                    insertKitMaternalQuery,
+                    kitMaternalInfo,
+                    function (err) {
+                      if (err) {
+                        db.rollback(function () {
+                          console.log(err);
+                          return res
+                            .status(500)
+                            .json({ error: "Error en el servidor" });
+                        });
+                      }
 
                       return insertBeneficio(index + 1);
-                    } else {
-                      db.rollback(function () {
-                        return res
-                          .status(400)
-                          .json({ error: "Tipo de beneficio desconocido" });
-                      });
                     }
-                  } else {
-                    db.rollback(function () {
-                      return res
-                        .status(500)
-                        .json({ error: "Error en el servidor" });
-                    });
-                  }
+                  );
+                } else {
+                  db.rollback(function () {
+                    return res
+                      .status(500)
+                      .json({ error: "Error en el servidor" });
+                  });
                 }
-              );
-            }
+              }
+            );
+          }
+        );
+      } else {
+        // Si no es Kit Maternal, proceder a insertar en beneficios_otorgados
+        const beneficioOtorgado = {
+          tipo,
+          afiliado_id,
+          familiar_id,
+          detalles,
+          provincia,
+          seccional,
+          delegacion,
+          direccion,
+          usuario_otorgante: usuarioOtorgante,
+          estado,
+        };
+
+        const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
+        db.query(insertQuery, beneficioOtorgado, function (err, insertResult) {
+          if (err) {
+            db.rollback(function () {
+              console.log(err);
+              return res.status(500).json({ error: "Error en el servidor" });
+            });
           }
 
-      return insertBeneficio(0);
-    });
+          if (insertResult && insertResult.insertId) {
+            insertedIds.push(insertResult.insertId);
+
+            // Insertar en la tabla específica de acuerdo al tipo de beneficio
+            if (tipo === "Kit escolar") {
+              const kitEscolarInfo = {
+                beneficio_otorgado_id: insertResult.insertId,
+                mochila: beneficio.mochila,
+                guardapolvo: beneficio.guardapolvo,
+                guardapolvo_confirm: beneficio.guardapolvo_confirm,
+                utiles: beneficio.utiles,
+                año_escolar: beneficio.año_escolar,
+              };
+
+              const insertKitEscolarQuery = "INSERT INTO kit_escolar SET ?";
+              db.query(insertKitEscolarQuery, kitEscolarInfo, function (err) {
+                if (err) {
+                  db.rollback(function () {
+                    console.log(err);
+                    return res
+                      .status(500)
+                      .json({ error: "Error en el servidor" });
+                  });
+                }
+
+                return insertBeneficio(index + 1);
+              });
+            } else if (tipo === "Luna de miel") {
+              const lunaDeMielInfo = {
+                beneficio_otorgado_id: insertResult.insertId,
+                numero_libreta: beneficio.numero_libreta,
+              };
+
+              const insertLunaDeMielQuery = "INSERT INTO luna_de_miel SET ?";
+              db.query(insertLunaDeMielQuery, lunaDeMielInfo, function (err) {
+                if (err) {
+                  db.rollback(function () {
+                    console.log(err);
+                    return res
+                      .status(500)
+                      .json({ error: "Error en el servidor" });
+                  });
+                }
+              });
+
+              return insertBeneficio(index + 1);
+            } else {
+              db.rollback(function () {
+                return res
+                  .status(400)
+                  .json({ error: "Tipo de beneficio desconocido" });
+              });
+            }
+          } else {
+            db.rollback(function () {
+              return res.status(500).json({ error: "Error en el servidor" });
+            });
+          }
+        });
+      }
+    }
+
+    return insertBeneficio(0);
+  });
   });
 };
-
 
 
 
