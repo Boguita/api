@@ -304,49 +304,87 @@ export const deleteAfiliado = (req, res) => {
 
 
 export const registerAfiliate = (req, res) => {
-  // const token = req.cookies.access_token;
-  // console.log(token);
-  // if (!token) return res.status(401).json("Not authenticated!");
+  const {
+    funcion,
+    name,
+    dni,
+    fecha_de_nacimiento,
+    tel,
+    nacionalidad,
+    provincia,
+    ciudad,
+    sexo,
+    estado_civil,
+    cuit,
+    domicilio,
+    correo,
+    datos_empleador,
+  } = req.body;
 
-  // jwt.verify(token, "jwtkey", (err, userInfo) => {
-  //   if (err) return res.status(403).json("Token is not valid!");
+  const datosEmpleadorString = JSON.stringify(datos_empleador);
 
-    const {
-      name,
-      dni,
-      fecha_de_nacimiento,
-      tel,
-      nacionalidad,
-      provincia,
-      ciudad,
-      sexo,
-      estado_civil,
-      cuit,
-      domicilio,
-      correo,
-      datos_empleador,
-    } = req.body;
+  const checkDNIQuery = `
+    SELECT dni
+    FROM afiliados
+    WHERE dni = ?
+  `;
+  db.query(checkDNIQuery, [dni], (err, dniResults) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
 
-    const datosEmpleadorString = JSON.stringify(datos_empleador);
+    if (dniResults.length > 0) {
+      console.log("llega esta funcion", funcion)
+      if (funcion) {
+        const updateQuery = `
+          UPDATE afiliados
+          SET
+            name = ?,
+            fecha_de_nacimiento = ?,
+            tel = ?,
+            nacionalidad = ?,
+            provincia = ?,
+            ciudad = ?,
+            sexo = ?,
+            estado_civil = ?,
+            cuit = ?,
+            domicilio = ?,
+            correo = ?,
+            datos_empleador = ?
+          WHERE dni = ?
+        `;
 
-    // Verificar si ya existe un afiliado con el mismo DNI
-    const checkDNIQuery = `
-      SELECT dni
-      FROM afiliados
-      WHERE dni = ?
-    `;
-    db.query(checkDNIQuery, [dni], (err, dniResults) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Error en el servidor" });
-      }
-      if (dniResults.length > 0) {
+        const updateValues = [
+          name,
+          fecha_de_nacimiento,
+          tel,
+          nacionalidad,
+          provincia,
+          ciudad,
+          sexo,
+          estado_civil,
+          cuit,
+          domicilio,
+          correo,
+          datosEmpleadorString,
+          dni,
+        ];
+
+        db.query(updateQuery, updateValues, (updateErr, updateResults) => {
+          if (updateErr) {
+            console.log(updateErr);
+            return res.status(500).json({ error: "Error en el servidor" });
+          }
+
+          return res.json({ message: "Afiliado actualizado exitosamente" });
+        });
+      } else {
         return res
           .status(400)
           .json({ error: "Ya existe un afiliado con este DNI" });
       }
-
-      // Si no existe, realizar la inserción
+    } else {
       const insertQuery = `
         INSERT INTO afiliados (name, dni, fecha_de_nacimiento, tel, nacionalidad, provincia, ciudad, sexo, estado_civil, cuit, domicilio, correo, datos_empleador)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -381,10 +419,9 @@ export const registerAfiliate = (req, res) => {
           });
         }
       );
-    });
-  // });
+    }
+  });
 };
-
 
 
 
