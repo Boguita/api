@@ -1294,12 +1294,16 @@ export const editStockEscolar = (req, res) => {
         talle14,
         talle16,
         talle18,
-        utiles,
+        utiles_Jardín,
+        utiles_Primario,
+        utiles_Secundario,
         mochila,
         funcion,
       } = req.body;
       const guardapolvoNum = parseFloat(guardapolvo);
-      const utilesNum = parseFloat(utiles);
+      const utilesJardinNum = parseFloat(utiles_Jardín);
+      const utilesPrimarioNum = parseFloat(utiles_Primario);
+      const utilesSecundarioNum = parseFloat(utiles_Secundario);
       const mochilaNum = parseFloat(mochila);
 
       if (funcion === "sumar") {
@@ -1313,7 +1317,9 @@ export const editStockEscolar = (req, res) => {
             talle14 = COALESCE(talle14, 0) + ?,
             talle16 = COALESCE(talle16, 0) + ?,
             talle18 = COALESCE(talle18, 0) + ?,
-            utiles = COALESCE(utiles, 0) + ?, 
+            utiles_Jardín = COALESCE(utiles_Jardín, 0) + ?, 
+            utiles_Primario = COALESCE(utiles_Primario, 0) + ?,
+            utiles_Secundario = COALESCE(utiles_Secundario, 0) + ?,
             mochila = COALESCE(mochila, 0) + ?
         WHERE idStock IN (${idPlaceholders})
       `;
@@ -1328,7 +1334,9 @@ export const editStockEscolar = (req, res) => {
             talle14,
             talle16,
             talle18,
-            utilesNum,
+            utilesJardinNum,
+            utilesPrimarioNum,
+            utilesSecundarioNum,
             mochilaNum,
             ...idseccionales,
           ],
@@ -1343,15 +1351,17 @@ export const editStockEscolar = (req, res) => {
             // Iterar sobre todas las IDs de seccionales y realizar la inserción en la tabla "enviados"
             idseccionales.forEach((idseccional) => {
               const envioQuery = `
-              INSERT INTO enviados (idseccionales, mochila, utiles, 
+              INSERT INTO enviados (idseccionales, mochila, utiles_Jardín, utiles_Primario, utiles_Secundario,  
                 talle6, talle8, talle10, talle12, talle14, talle16, talle18)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
               const envioValues = [
                 idseccional,
                 mochilaNum,
-                utilesNum,
+                utilesJardinNum,
+                utilesPrimarioNum,
+                utilesSecundarioNum,
                 talle6,
                 talle8,
                 talle10,
@@ -1373,11 +1383,9 @@ export const editStockEscolar = (req, res) => {
             });
 
             // Enviar respuesta después de completar todas las inserciones
-            return res
-              .status(200)
-              .json({ message: "Stock actualizado y envíos registrados" });
+            
           }
-        );
+        )
       } else if (funcion === "restar") {
         const idPlaceholders = idseccionales.map(() => "?").join(",");
         const query = `
@@ -1389,7 +1397,9 @@ export const editStockEscolar = (req, res) => {
             talle14 = COALESCE(talle14, 0) - ?,
             talle16 = COALESCE(talle16, 0) - ?,
             talle18 = COALESCE(talle18, 0) - ?,
-            utiles = COALESCE(utiles, 0) - ?, 
+            utiles_Jardín = COALESCE(utiles_Jardín, 0) - ?, 
+            utiles_Primario = COALESCE(utiles_Primario, 0) - ?,
+            utiles_Secundario = COALESCE(utiles_Secundario, 0) - ?,
             mochila = COALESCE(mochila, 0) - ?
         WHERE idStock IN (${idPlaceholders})
       `;
@@ -1404,7 +1414,9 @@ export const editStockEscolar = (req, res) => {
             talle14,
             talle16,
             talle18,
-            utilesNum,
+            utilesJardinNum,
+            utilesPrimarioNum,
+            utilesSecundarioNum,
             mochilaNum,
             ...idseccionales,
           ],
@@ -1418,12 +1430,13 @@ export const editStockEscolar = (req, res) => {
          
 
             // Enviar respuesta después de completar todas las inserciones
-            return res
-              .status(200)
-              .json({ message: "Stock actualizado y envíos registrados" });
+           
           }
         );
         };
+         return res
+           .status(200)
+           .json({ message: "Stock actualizado y envíos registrados" });
       }
     )};
 
@@ -1448,7 +1461,7 @@ export const editStockEscolar = (req, res) => {
         .split(",")
         .map((id) => parseInt(id.trim()));
       const { talles, utiles, mochila } = req.body;
-      const utilesNum = parseFloat(utiles);
+    
       const mochilaNum = parseFloat(mochila);
 
       // Construye la consulta SQL para actualizar los talles de guardapolvo individualmente
@@ -1461,16 +1474,25 @@ export const editStockEscolar = (req, res) => {
         }, [])
         .join(", ");
 
+        let utilesColumns = utiles.reduce((acc, util) => {
+          // Agrupa los utiles y cuenta cuántas veces aparece en el array, luego resta esa cantidad del stock
+          const count = utiles.filter((u) => u === util).length;
+          acc.push(`${util} = COALESCE(${util}, 0) - ${count}`);
+          return acc;
+        } , [])
+        .join(", ");
+
       const query = `
       UPDATE kit_escolar_stock
-      SET ${talleColumns.length > 0 ? talleColumns + "," : ""} utiles = COALESCE(utiles, 0) - ?,
+      SET ${talleColumns.length > 0 ? talleColumns + "," : ""} 
+      ${utilesColumns.length > 0 ? utilesColumns + "," : ""} 
       mochila = COALESCE(mochila, 0) - ?
       WHERE idStock IN (?)
     `;
 
       db.query(
         query,
-        [utilesNum, mochilaNum, ...idseccionales],
+        [mochilaNum, ...idseccionales],
         (err, results) => {
           if (err) {
             console.log(err);
@@ -1511,6 +1533,272 @@ function rollbackAndSendError(res, errorMessage) {
 }
 
 
+// ESTE CAMBIO SE PODRIA PROBAR
+// export const otorgarBeneficio = (req, res) => {
+//   const token = req.cookies.access_token;
+//   if (!token) {
+//     return res.status(401).json("No autenticado");
+//   }
+
+//   jwt.verify(token, "jwtkey", (err, userInfo) => {
+//     if (err) {
+//       return res.status(403).json("Token no válido");
+//     }
+
+//     const beneficiosData = req.body;
+//     const beneficiosKeys = Object.keys(beneficiosData);
+
+//     db.beginTransaction((err) => {
+//       if (err) {
+//         console.log(err);
+//         return sendError(res, "Error en el servidor");
+//       }
+//       const insertedIds = [];
+
+//       function insertBeneficio(index) {
+//         if (index >= beneficiosKeys.length) {
+//           db.commit((err) => {
+//             if (err) {
+//               rollbackAndSendError(res, "Error en el servidor");
+//             } else {
+//               sendSuccessResponse(res, insertedIds);
+//             }
+//           });
+//           return;
+//         }
+
+//         const beneficioKey = beneficiosKeys[index];
+//         console.log("beneficiosData completo:", beneficiosData);
+//         const beneficio = beneficiosData[beneficioKey];
+//         console.log("Beneficio completo", beneficio);
+
+//         const {
+//           usuario_otorgante,
+//           seccional_id,
+//           tipo,
+//           afiliado_id,
+//           familiar_id,
+//           detalles,
+//           provincia,
+//           seccional,
+//           delegacion,
+//           direccion,
+//           estado,
+//         } = beneficio;
+
+//         const usuarioOtorgante = usuario_otorgante;
+//         const añoActual = new Date().getFullYear();
+//         // Comprobación para Kit Maternal
+//         if (tipo === "Kit maternal") {
+//           const checkBeneficioQuery = `
+//           SELECT COUNT(*) AS count
+//           FROM
+//             beneficios_otorgados 
+//           WHERE
+//             afiliado_id = ?
+//             AND tipo = 'Kit maternal'
+//             AND estado = 'Entregado'
+//             AND YEAR(fecha_otorgamiento) = ?`;
+
+//           db.query(
+//             checkBeneficioQuery,
+//             [beneficio.afiliado_id, añoActual],
+//             function (err, results) {
+//               if (err) {
+//                 db.rollback(function () {
+//                   console.log(err);
+//                   return res
+//                     .status(500)
+//                     .json({ error: "Error en el servidor" });
+//                 });
+//               }
+
+//               console.log(results);
+
+//               const count = results[0].count;
+
+//               if (count > 0) {
+//                 return res.status(400).json({
+//                   error:
+//                     "No se puede otorgar el beneficio. Ya se otorgó uno en los últimos 12 meses.",
+//                 });
+//               }
+
+//               // Si la comprobación pasa, proceder a insertar en beneficios_otorgados
+//               const beneficioOtorgado = {
+//                 tipo,
+//                 afiliado_id,
+//                 familiar_id,
+//                 detalles,
+//                 provincia,
+//                 seccional,
+//                 delegacion,
+//                 direccion,
+//                 usuario_otorgante: usuarioOtorgante,
+//                 estado,
+//               };
+
+//               const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
+//               db.query(
+//                 insertQuery,
+//                 beneficioOtorgado,
+//                 function (err, insertResult) {
+//                   if (err) {
+//                     db.rollback(function () {
+//                       console.log(err);
+//                       return res
+//                         .status(500)
+//                         .json({ error: "Error en el servidor" });
+//                     });
+//                   }
+
+//                   if (insertResult && insertResult.insertId) {
+//                     insertedIds.push(insertResult.insertId);
+
+//                     const kitMaternalInfo = {
+//                       beneficio_otorgado_id: insertResult.insertId,
+//                       semanas: beneficio.semanas,
+//                       cantidad: beneficio.cantidad,
+//                       fecha_de_parto: beneficio.fecha_de_parto,
+//                       certificado: beneficio.certificado,
+//                     };
+
+//                     const insertKitMaternalQuery =
+//                       "INSERT INTO kit_maternal SET ?";
+//                     db.query(
+//                       insertKitMaternalQuery,
+//                       kitMaternalInfo,
+//                       function (err) {
+//                         if (err) {
+//                           db.rollback(function () {
+//                             console.log(err);
+//                             return res
+//                               .status(500)
+//                               .json({ error: "Error en el servidor" });
+//                           });
+//                         }
+
+//                         return insertBeneficio(index + 1);
+//                       }
+//                     );
+//                   } else {
+//                     db.rollback(function () {
+//                       return res
+//                         .status(500)
+//                         .json({ error: "Error en el servidor" });
+//                     });
+//                   }
+//                 }
+//               );
+//             }
+//           );
+//         } else {
+//           // Si no es Kit Maternal, proceder a insertar en beneficios_otorgados
+//           const beneficioOtorgado = {
+//             tipo,
+//             afiliado_id,
+//             familiar_id,
+//             detalles,
+//             provincia,
+//             seccional,
+//             delegacion,
+//             direccion,
+//             usuario_otorgante: usuarioOtorgante,
+//             estado,
+//           };
+
+//           const insertQuery = "INSERT INTO beneficios_otorgados SET ?";
+//           db.query(
+//             insertQuery,
+//             beneficioOtorgado,
+//             function (err, insertResult) {
+//               if (err) {
+//                 db.rollback(function () {
+//                   console.log(err);
+//                   return res
+//                     .status(500)
+//                     .json({ error: "Error en el servidor" });
+//                 });
+//               }
+
+//               if (insertResult && insertResult.insertId) {
+//                 insertedIds.push(insertResult.insertId);
+
+//                 // Insertar en la tabla específica de acuerdo al tipo de beneficio
+//                 if (tipo === "Kit escolar") {
+//                   const kitEscolarInfo = {
+//                     beneficio_otorgado_id: insertResult.insertId,
+//                     mochila: beneficio.mochila,
+//                     guardapolvo: beneficio.guardapolvo,
+//                     guardapolvo_confirm: beneficio.guardapolvo_confirm,
+//                     utiles: beneficio.utiles,
+//                     año_escolar: beneficio.año_escolar,
+//                   };
+
+//                   const insertKitEscolarQuery = "INSERT INTO kit_escolar SET ?";
+//                   db.query(
+//                     insertKitEscolarQuery,
+//                     kitEscolarInfo,
+//                     function (err) {
+//                       if (err) {
+//                         db.rollback(function () {
+//                           console.log(err);
+//                           return res
+//                             .status(500)
+//                             .json({ error: "Error en el servidor" });
+//                         });
+//                       }
+
+//                       return insertBeneficio(index + 1);
+//                     }
+//                   );
+//                 } else if (tipo === "Luna de miel") {
+//                   const lunaDeMielInfo = {
+//                     beneficio_otorgado_id: insertResult.insertId,
+//                     numero_libreta: beneficio.numero_libreta,
+//                   };
+
+//                   const insertLunaDeMielQuery =
+//                     "INSERT INTO luna_de_miel SET ?";
+//                   db.query(
+//                     insertLunaDeMielQuery,
+//                     lunaDeMielInfo,
+//                     function (err) {
+//                       if (err) {
+//                         db.rollback(function () {
+//                           console.log(err);
+//                           return res
+//                             .status(500)
+//                             .json({ error: "Error en el servidor" });
+//                         });
+//                       }
+
+//                       return insertBeneficio(index + 1);
+//                     }
+//                   );
+//                 } else {
+//                   db.rollback(function () {
+//                     return res
+//                       .status(400)
+//                       .json({ error: "Tipo de beneficio desconocido" });
+//                   });
+//                 }
+//               } else {
+//                 db.rollback(function () {
+//                   return res
+//                     .status(500)
+//                     .json({ error: "Error en el servidor" });
+//                 });
+//               }
+//             }
+//           );
+//         }
+//       }
+
+//       return insertBeneficio(0);
+//     });
+//   });
+// };
 
 export const otorgarBeneficio = (req, res) => {
   const token = req.cookies.access_token;
@@ -1758,7 +2046,6 @@ export const otorgarBeneficio = (req, res) => {
   });
   });
 };
-
 
 
 
