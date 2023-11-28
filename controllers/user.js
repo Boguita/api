@@ -1,6 +1,6 @@
 import { db } from "../db.js";
 import sendMail from "./send-mail.js";
-import sendMailSuppport from "./send-mail-support.js";
+import sendMailSupport from "./send-mail-support.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
@@ -609,7 +609,7 @@ export const approveUser = (req, res) => {
       }
 
       // Si el campo 'status' se actualiza correctamente a 'Aprobado'
-      sendMail(emailUser, subjectUser, contentUser);
+      sendMailSupport(emailUser, subjectUser, contentUser);
       return res.status(200).json("El usuario ha sido aprobado.");
     });
   });
@@ -647,7 +647,7 @@ export const declineUser = (req, res) => {
       }
 
       // If the 'approved' field is successfully updated to true
-      sendMail(emailUser, subjectUser, contentUser);
+      sendMailSupport(emailUser, subjectUser, contentUser);
       return res.status(200).json("El usuario ha sido rechazado.");
     });
   });
@@ -678,8 +678,8 @@ export const soporte = (req, res) => {
 
   try {
     // Intenta enviar correos electrónicos
-    sendMailSuppport(emailAdmin, subjectAdmin, contentAdmin);
-    sendMailSuppport(email, subjectUser, contentUser);
+    sendMailSupport(emailAdmin, subjectAdmin, contentAdmin);
+    sendMailSupport(email, subjectUser, contentUser);
 
     return res.status(200).json("La consulta ha sido enviada con éxito.");
   } catch (error) {
@@ -717,7 +717,7 @@ export const deleteUser = (req, res) => {
       // If the user is successfully deleted
       return res.status(200).json("El usuario ha sido eliminado.");
     });
-    sendMail(emailUser, subjectUser, contentUser);
+    sendMailSupport(emailUser, subjectUser, contentUser);
   });
 };
 

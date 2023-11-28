@@ -2,10 +2,11 @@ import { db } from "../db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import sendMail  from "./send-mail.js";
+import sendMailSuppport from "./send-mail-support.js";
 
 
 export const register = (req, res) => {
-  const emailAdmin = ["heberdgomez@hotmail.com"];
+  const emailAdmin = ["soporte@beneficiosuatre.com.ar"];
   const contentAdmin = `<h1>¡Se ha registrado un usuario con el nombre: ${req.body.nombre}!</h1> <p>DATOS DEL USUARIO:  email: ${req.body.email}</p>`;
   const subjectAdmin = "Nuevo registro en UATRE BENEFICIOS";
 
@@ -64,8 +65,8 @@ const seccionalQuery =
              db.query(q, newUser, (err, data) => {
                if (err) return res.status(500).json(err);
 
-               sendMail(emailAdmin, subjectAdmin, contentAdmin);
-               sendMail(emailUser, subjectUser, contentUser);
+               sendMailSuppport(emailAdmin, subjectAdmin, contentAdmin);
+               sendMailSuppport(emailUser, subjectUser, contentUser);
 
                return res
                  .status(200)
@@ -85,33 +86,33 @@ const seccionalQuery =
 };
 
 
-export const registerAdmin = (req, res) => {
+// export const registerAdmin = (req, res) => {
 
-  if(!req.body.username, !req.body.email, !req.body.password, !req.body.area) {
-    return res.status(409).json("Complete all the required fields")
-  } else {
-  //CHECK EXISTING USER
-  const q = "SELECT * FROM employee WHERE email = ? OR username = ?";
+//   if(!req.body.username, !req.body.email, !req.body.password, !req.body.area) {
+//     return res.status(409).json("Complete all the required fields")
+//   } else {
+//   //CHECK EXISTING USER
+//   const q = "SELECT * FROM employee WHERE email = ? OR username = ?";
 
-  db.query(q, [req.body.email, req.body.username,], (err, data) => {
-    if (err) return res.status(500).json(err);
-    if (data.length) return res.status(409).json("User already exists!");
+//   db.query(q, [req.body.email, req.body.username,], (err, data) => {
+//     if (err) return res.status(500).json(err);
+//     if (data.length) return res.status(409).json("User already exists!");
 
-    //Hash the password and create a user
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(req.body.password, salt);
+//     //Hash the password and create a user
+//     const salt = bcrypt.genSaltSync(10);
+//     const hash = bcrypt.hashSync(req.body.password, salt);
 
-    const q =
-      "INSERT INTO employee(`username`,`email`,`area`,`password`) VALUES (?)";
-    const values = [req.body.username, req.body.email, req.body.area, hash];
+//     const q =
+//       "INSERT INTO employee(`username`,`email`,`area`,`password`) VALUES (?)";
+//     const values = [req.body.username, req.body.email, req.body.area, hash];
 
-    db.query(q, [values], (err, data) => {
-      if (err) return res.status(500).json(err);
-      return res.status(200).json("User has been created.");
-    });
-  });
-};
-}
+//     db.query(q, [values], (err, data) => {
+//       if (err) return res.status(500).json(err);
+//       return res.status(200).json("User has been created.");
+//     });
+//   });
+// };
+// }
 
 export const login = (req, res) => {
    if(!req.body.email, !req.body.password) {
@@ -153,16 +154,6 @@ export const login = (req, res) => {
   });
 };
 };
-
-export const getCookies = (req, res) => {
-  const token = req.cookies.access_token;
-  if (!token) return res.status(401).json("Not authenticated!");
-
-  jwt.verify(token, "jwtkey", (err, userInfo) => {
-    if (err) return res.status(403).json("Token is not valid!");
-    return res.status(200).json(userInfo);
-  });
-}
 
 
 export const loginAdmin = (req, res) => {
@@ -225,7 +216,7 @@ export const passwordForgot = (req, res) => {
     const subject = "Recuperar contraseña";
     const content = `<h1>¡Hola, ${data[0].username}!</h1> <p>Para recuperar tu contraseña, haz click en el siguiente enlace: <a href="https://fancy-caramel-9e3c4d.netlify.app/reset-password/${link}">Recuperar contraseña</a></p>`;
 
-    sendMail(email, subject, content);
+    sendMailSuppport(email, subject, content);
     return res.status(200).json("Email sent!");
   });
 };
