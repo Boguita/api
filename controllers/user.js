@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 import sendMail from "./send-mail.js";
+import sendMailSuppport from "./send-mail-support.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
@@ -660,7 +661,7 @@ export const soporte = (req, res) => {
   console.log(req.body);
   const {email, name, dni, seguimiento, type, benefit, message} = req.body;
   
-  const emailAdmin = ["heberdgomez@hotmail.com"];
+  const emailAdmin = ["soporte@beneficiosuatre.com.ar"];
   const contentAdmin = `<h1>¡Se ha registrado una nueva consulta! </h1> <p><strong>DATOS DEL FORMULARIO:</strong>
     <br/> EMAIL: ${email} <br/>
     NOMBRE: ${name} <br/>
@@ -677,8 +678,8 @@ export const soporte = (req, res) => {
 
   try {
     // Intenta enviar correos electrónicos
-    sendMail(emailAdmin, subjectAdmin, contentAdmin);
-    sendMail(email, subjectUser, contentUser);
+    sendMailSuppport(emailAdmin, subjectAdmin, contentAdmin);
+    sendMailSuppport(email, subjectUser, contentUser);
 
     return res.status(200).json("La consulta ha sido enviada con éxito.");
   } catch (error) {
