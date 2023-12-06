@@ -48,6 +48,147 @@ export const getBeneficiosByDni = (req, res) => {
   });
 };
 
+
+
+
+
+export const getSeccionalesExcel = (req, res) => {
+  const query = `
+    SELECT
+      seccionales.idseccionales,
+      seccionales.nombre,
+      seccionales.provincia,
+      seccionales.delegacion,
+      seccionales.direccion
+    FROM
+      seccionales
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor"});
+    }
+
+    // Crear un nuevo libro de Excel
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Seccionales");
+
+    // Definir las columnas en el archivo Excel con estilo
+    const headerRow = worksheet.addRow([
+      "ID",
+      "Nombre",
+      "Provincia",
+      "Delegación",
+      "Dirección",
+    ]);
+
+    // Aplicar estilo a la fila de encabezado
+    headerRow.eachCell((cell, index) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF23A1D8" },
+      };
+      cell.font = {
+        bold: true, // Texto en negrita
+      };
+      cell.alignment = {
+        vertical: "middle", // Alineación vertical centrada
+        horizontal: "center", // Alineación horizontal centrada
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      if (index === 1 || index === 2 || index === 3 || index === 4) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Agregar los datos a las filas del archivo Excel con estilo
+    results.forEach((row) => {
+      worksheet.addRow([
+        row.idseccionales,
+        row.nombre,
+        row.provincia,
+        row.delegacion,
+        row.direccion,
+      ]);
+    });
+
+    function getExcelAlpha(num) {
+      let alpha = "";
+      while (num > 0) {
+        const remainder = (num - 1) % 26;
+        alpha = String.fromCharCode(65 + remainder) + alpha;
+        num = Math.floor((num - 1) / 26);
+      }
+      return alpha;
+    }
+
+    // Aplicar bordes internos a la tabla de datos
+    const numDataRows = results.length;
+    const numColumns = headerRow.actualCellCount;
+    const lastDataRow = worksheet.getRow(numDataRows + 1);
+
+    for (let i = 1; i <= numColumns; i++) {
+      for (let j = 2; j <= numDataRows + 1; j++) {
+        worksheet.getCell(`${getExcelAlpha(i)}${j}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+          bottom: { style: "thin" },
+        };
+      }
+    }
+
+    // Aplicar bordes exteriores a la tabla de datos
+    for (let i = 1; i <= numColumns; i++) {
+      worksheet.getCell(`${getExcelAlpha(i)}1`).border = {
+        top: { style: "thin" }, // Bordes superiores de las columnas de encabezado
+        bottom: { style: "thin" }, // Bordes inferiores de las columnas de datos
+        left: { style: "thin" }, // Borde izquierdo de la columna
+        right: { style: "thin" }, // Borde derecho de la columna
+      };
+    }
+
+    lastDataRow.eachCell((cell, index) => {
+      cell.border = {
+        bottom: { style: "thin" }, // Bordes inferiores de la última fila de datos
+        left: { style: "thin" }, // Borde izquierdo de la última fila de datos
+        right: { style: "thin" }, // Borde derecho de la última fila de datos
+      };
+
+      if (index === 1 || index === 2 || index === 3 || index === 4) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Configurar la respuesta HTTP para descargar el archivo Excel
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=seccionales.xlsx"
+    );
+
+    // Enviar el archivo Excel como respuesta
+    workbook.xlsx.write(res).then(() => {
+      res.end();
+    });
+  });
+};
+
+
+
+
 export const getKitLunadeMielExcel = (req, res) => {
   const query = `
     SELECT
@@ -922,6 +1063,56 @@ export const deleteSeccional = (req,res) => {
     return res.status(200).json({ message: "Seccional eliminada" });
   });
 }
+
+export const editSeccional = (req, res) => {
+  const { id } = req.params;
+  const { nombre, provincia, delegacion, direccion } = req.body;
+
+  // Verifica si los campos del cuerpo de la solicitud no están vacíos antes de realizar la actualización
+  if (
+    nombre === "" &&
+    provincia === "" &&
+    delegacion === "" &&
+    direccion === ""
+  ) {
+    return res
+      .status(400)
+      .json({ error: "No se proporcionaron datos para la actualización" });
+  }
+
+  // Construye la parte SET de la consulta SQL basada en los campos proporcionados en el cuerpo de la solicitud
+  const setClause = Object.entries({ nombre, provincia, delegacion, direccion })
+    .filter(([key, value]) => value !== "")
+    .map(([key, value]) => `${key} = ?`)
+    .join(", ");
+
+  // Construye la consulta SQL completa
+  const query = `
+    UPDATE seccionales
+    SET ${setClause}
+    WHERE idseccionales = ?
+  `;
+
+  // Crea un array con los valores que se deben actualizar
+  const values = Object.values({
+    nombre,
+    provincia,
+    delegacion,
+    direccion,
+  }).filter((value) => value !== "");
+  values.push(id);
+
+  db.query(query, values, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error al editar la seccional" });
+    }
+
+    return res.status(200).json({ message: "Seccional editada" });
+  });
+};
+
+
 
 export const getSeccionales = (req, res) => {
 
@@ -1840,6 +2031,7 @@ export const otorgarBeneficio = (req, res) => {
 
       const {
         usuario_otorgante,
+        usuario_otorgante_id,
         seccional_id,
         tipo,
         afiliado_id,
@@ -1853,6 +2045,7 @@ export const otorgarBeneficio = (req, res) => {
       } = beneficio;
 
       const usuarioOtorgante = usuario_otorgante;
+      const usuarioOtorganteId = usuario_otorgante_id;
       const añoActual = new Date().getFullYear();
       // Comprobación para Kit Maternal
       if (tipo === "Kit maternal") {
@@ -1899,6 +2092,7 @@ export const otorgarBeneficio = (req, res) => {
               delegacion,
               direccion,
               usuario_otorgante: usuarioOtorgante,
+              usuario_otorgante_id: usuarioOtorganteId,
               estado,
             };
 
@@ -1968,6 +2162,7 @@ export const otorgarBeneficio = (req, res) => {
           delegacion,
           direccion,
           usuario_otorgante: usuarioOtorgante,
+          usuario_otorgante_id: usuarioOtorganteId,
           estado,
         };
 
@@ -2068,3 +2263,15 @@ export const getBeneficios = (req, res) => {
     });
   });
 };
+
+export const getBeneficiosById = (req, res) => {
+    const id = req.params.id;
+    const q = 
+       "SELECT * FROM beneficios_otorgados WHERE usuario_otorgante_id = ?"
+    db.query(q, [id], (err, data) => {
+      if (err) return res.status(500).send(err);
+
+      return res.status(200).json(data);
+    });
+  
+}

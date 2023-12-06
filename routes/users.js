@@ -1,5 +1,5 @@
 import express from "express"
-import { approveUser, beneficiosOtorgados, comprobarAfiliados, declineUser, deleteAfiliado, deleteUser, getAfiliado, getAllAfiliados, getAllUsers, getUsers, registerAfiliate, registerFamiliar, soporte, updateUsers } from "../controllers/user.js";
+import { approveUser, beneficiosOtorgados, comprobarAfiliados, declineUser, deleteAfiliado, deleteUser, getAfiliado, getAfiliadosExcel, getAllAfiliados, getAllUsers, getUsers, getUsersExcel, registerAfiliate, registerFamiliar, soporte, updateUsers } from "../controllers/user.js";
 import multer from "multer";
 const router = express.Router()
 const plainDataMulter = multer().none();
@@ -7,11 +7,15 @@ const plainDataMulter = multer().none();
 
 router.get("/users/:id", getUsers);
 
+router.get("/users/excel/:ids", getUsersExcel);
+
 router.get("/", getAllUsers);
 
 router.post("/users/update/:id", updateUsers);
 
 router.get("/afiliados", getAllAfiliados);
+
+router.get("/afiliados/excel/:ids", getAfiliadosExcel);
 
 router.delete("/afiliados/:id", deleteAfiliado);
 

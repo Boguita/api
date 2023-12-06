@@ -3,7 +3,7 @@ import sendMail from "./send-mail.js";
 import sendMailSupport from "./send-mail-support.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-
+import Excel from "exceljs";
 
 export const getUsers = (req, res) => {
    
@@ -16,6 +16,117 @@ export const getUsers = (req, res) => {
     return res.status(200).json(data);
   });
 };
+
+export const getAfiliadosExcel = (req, res) => {
+  const { ids } = req.params; // Suponiendo que userIds es una lista de IDs separada por algún carácter, como una coma (ej. "1,2,3")
+  console.log(ids);
+  const idsArray = ids.split(",").map(Number); // Convertir la cadena de IDs en un array de números
+
+  const query = `
+    SELECT * FROM afiliados
+    WHERE idafiliados IN (?)
+  `;
+  db.query(query, [idsArray], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    const afiliados = results;
+
+    // Aquí deberías tener la información de los usuarios y puedes proceder a exportarla a Excel
+
+    // Código para exportar a Excel (ejemplo utilizando una librería como exceljs)
+
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet("Afiliados");
+
+    // Agregar encabezados de columnas
+    const columns = Object.keys(afiliados[0]);
+    worksheet.addRow(columns);
+
+    // Agregar datos de usuarios
+    afiliados.forEach((afiliado) => {
+      const rowData = columns.map((column) => afiliado[column]);
+      worksheet.addRow(rowData);
+    });
+
+    // Enviar el archivo Excel al cliente
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", "attachment; filename=afiliados.xlsx");
+    return workbook.xlsx
+      .write(res)
+      .then(() => {
+        res.end();
+      })
+      .catch((err) => {
+        console.log(err);
+        return res
+          .status(500)
+          .json({ error: "Error al escribir el archivo Excel" });
+      });
+  });
+};
+
+
+export const getUsersExcel = (req, res) => {
+  const { ids } = req.params; // Suponiendo que userIds es una lista de IDs separada por algún carácter, como una coma (ej. "1,2,3")
+  console.log(ids);
+  const idsArray = ids.split(",").map(Number); // Convertir la cadena de IDs en un array de números
+
+  const query = `
+    SELECT * FROM users
+    WHERE id IN (?)
+  `;
+  db.query(query, [idsArray], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    const users = results;
+
+    // Aquí deberías tener la información de los usuarios y puedes proceder a exportarla a Excel
+
+    // Código para exportar a Excel (ejemplo utilizando una librería como exceljs)
+
+    const workbook = new Excel.Workbook();
+    const worksheet = workbook.addWorksheet("Usuarios");
+
+    // Agregar encabezados de columnas
+    const columns = Object.keys(users[0]);
+    worksheet.addRow(columns);
+
+    // Agregar datos de usuarios
+    users.forEach((user) => {
+      const rowData = columns.map((column) => user[column]);
+      worksheet.addRow(rowData);
+    });
+
+    // Enviar el archivo Excel al cliente
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", "attachment; filename=usuarios.xlsx");
+    return workbook.xlsx
+      .write(res)
+      .then(() => {
+        res.end();
+      })
+      .catch((err) => {
+        console.log(err);
+        return res
+          .status(500)
+          .json({ error: "Error al escribir el archivo Excel" });
+      });
+  });
+};
+
+
 
 export const getAllUsers = (req, res) => {
   const token = req.cookies.access_token;
