@@ -50,6 +50,189 @@ export const getBeneficiosByDni = (req, res) => {
 
 
 
+export const getStockEscolarExcel = (req, res) => {
+  const query = `
+    SELECT *
+    FROM kit_escolar_stock
+    INNER JOIN seccionales ON kit_escolar_stock.idStock = seccionales.idseccionales
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor"});
+    }
+
+    // Crear un nuevo libro de Excel
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Stock Escolar");
+
+    // Definir las columnas en el archivo Excel con estilo
+    const headerRow = worksheet.addRow([
+      "ID",
+      "Provincia",
+      "Delegación",
+      "Seccional",
+      "Dirección",
+      "Mochila",
+      "T.6",
+      "T.8",
+      "T.10",
+      "T.12",
+      "T.14",
+      "T.16",
+      "T.18",
+      "ÚT.J",
+      "ÚT.P",
+      "ÚT.S",      
+    ]);
+
+    // Aplicar estilo a la fila de encabezado
+    headerRow.eachCell((cell, index) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF23A1D8" },
+      };
+      cell.font = {
+        bold: true, // Texto en negrita
+      };
+      cell.alignment = {
+        vertical: "middle", // Alineación vertical centrada
+        horizontal: "center", // Alineación horizontal centrada
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      if (
+        index === 1 ||
+        index === 2 ||
+        index === 3 ||
+        index === 4 ||
+        index === 5 ||
+        index === 6 ||
+        index === 7 ||
+        index === 8 ||
+        index === 9 ||
+        index === 10 ||
+        index === 11 ||
+        index === 12 ||
+        index === 13 ||
+        index === 14 ||
+        index === 15
+      ) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Agregar los datos a las filas del archivo Excel con estilo
+    results.forEach((row) => {
+      worksheet.addRow([
+        row.idStock,
+        row.provincia,
+        row.delegacion,
+        row.nombre,
+        row.direccion,
+        row.mochila,
+        row.talle6,
+        row.talle8,
+        row.talle10,
+        row.talle12,
+        row.talle14,
+        row.talle16,
+        row.talle18,
+        row.utiles_Jardín,
+        row.utiles_Primario,
+        row.utiles_Secundario,
+      ]);
+    });
+
+    function getExcelAlpha(num) {
+      let alpha = "";
+      while (num > 0) {
+        const remainder = (num - 1) % 26;
+        alpha = String.fromCharCode(65 + remainder) + alpha;
+        num = Math.floor((num - 1) / 26);
+      }
+      return alpha;
+    }
+
+    // Aplicar bordes internos a la tabla de datos
+    const numDataRows = results.length;
+    const numColumns = headerRow.actualCellCount;
+    const lastDataRow = worksheet.getRow(numDataRows + 1);
+    
+    for (let i = 1; i <= numColumns; i++) {
+      for (let j = 2; j <= numDataRows + 1; j++) {
+        worksheet.getCell(`${getExcelAlpha(i)}${j}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+          bottom: { style: "thin" },
+        };
+      }
+    }
+
+    // Aplicar bordes exteriores a la tabla de datos
+    for (let i = 1; i <= numColumns; i++) {
+      worksheet.getCell(`${getExcelAlpha(i)}1`).border = {
+        top: { style: "thin" }, // Bordes superiores de las columnas de encabezado
+        bottom: { style: "thin" }, // Bordes inferiores de las columnas de datos
+        left: { style: "thin" }, // Borde izquierdo de la columna
+        right: { style: "thin" }, // Borde derecho de la columna
+      };
+    }
+
+    lastDataRow.eachCell((cell, index) => {
+      cell.border = {
+        bottom: { style: "thin" }, // Bordes inferiores de la última fila de datos
+        left: { style: "thin" }, // Borde izquierdo de la última fila de datos
+        right: { style: "thin" }, // Borde derecho de la última fila de datos
+      };
+
+      if (
+        index === 1 ||
+        index === 2 ||
+        index === 3 ||
+        index === 4 ||
+        index === 5 ||
+        index === 6 ||
+        index === 7 ||
+        index === 8 ||
+        index === 9 ||
+        index === 10 ||
+        index === 11 ||
+        index === 12 ||
+        index === 13 ||
+        index === 14 ||
+        index === 15
+      ) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Configurar la respuesta HTTP para descargar el archivo Excel
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=stock_escolar.xlsx"
+    );
+
+    // Enviar el archivo Excel como respuesta
+    workbook.xlsx.write(res).then(() => {
+      res.end();
+    });
+  });
+};
+
 
 
 export const getSeccionalesExcel = (req, res) => {

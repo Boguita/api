@@ -26,6 +26,7 @@ import {
   editSeccional,
   getSeccionalesExcel,
   getBeneficiosById,
+  getStockEscolarExcel,
 } from "../controllers/post.js";
 
 const router = express.Router();
@@ -49,6 +50,7 @@ router.get('/stock-escolar/:seccional', comprobarStockEscolar)
 router.put('/stock-escolar/:seccionales', editStockEscolar)
 router.put("/stock-escolar-individual/:seccionales", editStockEscolarIndividual);
 router.get("/stock-escolar-provincia/:provincia", stockEscolarProvincia);
+router.get("/stock-escolar/all/excel", getStockEscolarExcel);
 router.get("/beneficio/:dni", getBeneficiosByDni);
 router.get("/beneficio-otorgado/:id", getBeneficiosById);
 router.get("/verified-kit-escolar/:familiar_ids", comprobarBeneficios);
@@ -56,6 +58,7 @@ router.get("/verified-kit-maternal/:familiar_id", comprobarBeneficioKitMaternal)
 router.put("/:beneficio_id", updateEstadoBeneficio)
 router.get("/kit-escolar/excel", getKitEscolarExcel)
 router.get("/kit-maternal/excel", getKitMaternalExcel);
+
 
 
 
