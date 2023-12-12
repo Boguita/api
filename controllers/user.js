@@ -18,9 +18,10 @@ export const getUsers = (req, res) => {
 };
 
 export const getAfiliadosExcel = (req, res) => {
-  const { ids } = req.params; // Suponiendo que userIds es una lista de IDs separada por algún carácter, como una coma (ej. "1,2,3")
+  //PUEDO HACER QUE SI REQ.PARAMS ALL ES IGUAL A TRUE ME DESCARGUE TODAS LAS IDS Y NO PASARLAS DESDE EL FRONT
+  const { ids } = req.body; // Suponiendo que userIds es una lista de IDs separada por algún carácter, como una coma (ej. "1,2,3")
   console.log(ids);
-  const idsArray = ids.split(",").map(Number); // Convertir la cadena de IDs en un array de números
+  const idsArray = ids.map(Number); // Convertir la cadena de IDs en un array de números
 
   const query = `
     SELECT * FROM afiliados
@@ -73,6 +74,8 @@ export const getAfiliadosExcel = (req, res) => {
 
 
 export const getUsersExcel = (req, res) => {
+  //PUEDO HACER QUE SI REQ.PARAMS ALL ES IGUAL A TRUE ME DESCARGUE TODAS LAS IDS Y NO PASARLAS DESDE EL FRONT
+  
   const { ids } = req.params; // Suponiendo que userIds es una lista de IDs separada por algún carácter, como una coma (ej. "1,2,3")
   console.log(ids);
   const idsArray = ids.split(",").map(Number); // Convertir la cadena de IDs en un array de números

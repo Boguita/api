@@ -15,7 +15,7 @@ router.post("/users/update/:id", updateUsers);
 
 router.get("/afiliados", getAllAfiliados);
 
-router.get("/afiliados/excel/:ids", getAfiliadosExcel);
+router.post("/afiliados/excel", getAfiliadosExcel);
 
 router.delete("/afiliados/:id", deleteAfiliado);
 

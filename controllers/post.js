@@ -4,13 +4,15 @@ import excel from "exceljs";
 
 export const getBeneficiosByDni = (req, res) => {
   const dni = req.params.dni;
-
+  console.log(dni);
   const query = `
     SELECT
       beneficios_otorgados.id,
       beneficios_otorgados.tipo,
       beneficios_otorgados.detalles,
       beneficios_otorgados.estado,
+      beneficios_otorgados.constancia_img,
+      beneficios_otorgados.fecha_entrega,
       kit_escolar.mochila,
       kit_escolar.guardapolvo,
       kit_escolar.utiles,
@@ -745,6 +747,223 @@ export const getKitMaternalExcel = (req, res) => {
 
 
 
+export const getKitMaternalExcelIds = (req, res) => {
+  //PUEDO HACER QUE SI REQ.PARAMS ALL ES IGUAL A TRUE ME DESCARGUE TODAS LAS IDS Y NO PASARLAS DESDE EL FRONT
+
+  const { ids } = req.params; // Suponiendo que userIds es una lista de IDs separada por algún carácter, como una coma (ej. "1,2,3")
+  console.log(ids);
+  const idsArray = ids.split(",").map(Number); // Convertir la cadena de IDs en un array de números
+
+  const query = `
+    SELECT
+      beneficios_otorgados.id,
+      beneficios_otorgados.tipo,
+      beneficios_otorgados.detalles,
+      beneficios_otorgados.provincia,
+      beneficios_otorgados.delegacion,
+      beneficios_otorgados.seccional,
+      beneficios_otorgados.direccion,
+      beneficios_otorgados.estado,
+      kit_maternal.semanas,
+      kit_maternal.fecha_de_parto,
+      kit_maternal.cantidad,     
+      kit_maternal.certificado, 
+      beneficios_otorgados.fecha_otorgamiento,
+      beneficios_otorgados.afiliado_id,
+      beneficios_otorgados.familiar_id,
+      familiares.name AS familiar_name,
+      familiares.dni AS familiar_dni,
+      familiares.tel AS familiar_tel,
+      familiares.categoria AS familiar_categoria,
+      afiliados.name AS afiliado_name,
+      afiliados.dni AS afiliado_dni
+    FROM
+      beneficios_otorgados
+    LEFT JOIN
+      familiares ON beneficios_otorgados.familiar_id = familiares.idfamiliares
+    LEFT JOIN
+      afiliados ON beneficios_otorgados.afiliado_id = afiliados.idafiliados
+    LEFT JOIN
+      kit_maternal ON beneficios_otorgados.id = kit_maternal.beneficio_otorgado_id
+    WHERE
+      beneficios_otorgados.id IN (?)
+  `;
+
+  db.query(query, [idsArray], (err, results) => {
+
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error en el servidor" });
+    }
+
+    // Crear un nuevo libro de Excel
+    const workbook = new excel.Workbook();
+    const worksheet = workbook.addWorksheet("Kit Maternal");
+
+    // Definir las columnas en el archivo Excel con estilo
+    const headerRow = worksheet.addRow([
+      "ID",
+      "Tipo",
+      "Detalles",
+      "Estado",
+      "Provincia",
+      "Delegación",
+      "Seccional",
+      "Dirección",
+      "Semanas Gest.",
+      "Fecha de Parto",
+      "Cantidad Hijos",
+      "Fecha de Otorgamiento",
+      "Certificado",
+      "Afiliado ID",
+      "Afiliado",
+      "DNI Afiliado",
+      "Familiar ID",
+      "Nombre del Familiar",
+      "DNI del Familiar",
+      "Teléfono del Familiar",
+      "Categoría del Familiar",
+    ]);
+
+    // Aplicar estilo a la fila de encabezado
+    headerRow.eachCell((cell, index) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF23A1D8" },
+      };
+      cell.font = {
+        bold: true, // Texto en negrita
+      };
+      cell.alignment = {
+        vertical: "middle", // Alineación vertical centrada
+        horizontal: "center", // Alineación horizontal centrada
+      };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+
+      if (
+        index === 1 ||
+        index === 2 ||
+        index === 3 ||
+        index === 4 ||
+        index === 5 ||
+        index === 6 ||
+        index === 7 ||
+        index === 9 ||
+        index === 10 ||
+        index === 11 ||
+        index === 12 ||
+        index === 13 ||
+        index === 14 ||
+        index === 15
+      ) {
+        // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
+        worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
+      } // Cambia 10 al ancho deseado
+    });
+
+    // Agregar los datos a las filas del archivo Excel con estilo
+    results.forEach((row) => {
+      worksheet.addRow([
+        row.id,
+        row.tipo,
+        row.detalles,
+        row.estado,
+        row.provincia,
+        row.delegacion,
+        row.seccional,
+        row.direccion,
+        row.semanas,
+        row.fecha_de_parto,
+        row.cantidad,
+        row.fecha_otorgamiento,
+        "https://back.beneficiosuatre.com.ar/" + row.certificado,
+        row.afiliado_id,
+        row.afiliado_name,
+        row.afiliado_dni,
+        row.familiar_id,
+        row.familiar_name,
+        row.familiar_dni,
+        row.familiar_tel,
+        row.familiar_categoria,
+      ]);
+    });
+
+    function getExcelAlpha(num) {
+      let alpha = "";
+      while (num > 0) {
+        const remainder = (num - 1) % 26;
+        alpha = String.fromCharCode(65 + remainder) + alpha;
+        num = Math.floor((num - 1) / 26);
+      }
+      return alpha;
+    }
+
+    // Aplicar bordes internos a la tabla de datos
+    const numDataRows = results.length;
+    const numColumns = headerRow.actualCellCount;
+    const lastDataRow = worksheet.getRow(numDataRows + 1);
+
+    for (let i = 1; i <= numColumns; i++) {
+      for (let j = 2; j <= numDataRows + 1; j++) {
+        worksheet.getCell(`${getExcelAlpha(i)}${j}`).border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+          bottom: { style: "thin" },
+        };
+      }
+    }
+
+    // Aplicar bordes exteriores a la tabla de datos
+    for (let i = 1; i <= numColumns; i++) {
+      worksheet.getCell(`${getExcelAlpha(i)}1`).border = {
+        top: { style: "thin" }, // Bordes superiores de las columnas de encabezado
+        bottom: { style: "thin" }, // Bordes inferiores de las columnas de datos
+        left: { style: "thin" }, // Borde izquierdo de la columna
+        right: { style: "thin" }, // Borde derecho de la columna
+      };
+    }
+
+    lastDataRow.eachCell((cell, index) => {
+      cell.border = {
+        bottom: { style: "thin" }, // Bordes inferiores de la última fila de datos
+        left: { style: "thin" }, // Borde izquierdo de la última fila de datos
+        right: { style: "thin" }, // Borde derecho de la última fila de datos
+      };
+    }
+      
+      );
+
+    // Configurar la respuesta HTTP para descargar el archivo Excel
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=kit_escolar.xlsx"
+    );
+
+    // Enviar el archivo Excel como respuesta
+
+    workbook.xlsx.write(res).then(() => {
+      res.end();
+    }
+
+    );
+  }
+  );
+}
+
+
+
+
 
 export const getKitEscolarExcel = (req, res) => {
   const query = `
@@ -979,13 +1198,17 @@ export const getKitMaternal = (req, res) => {
   const query = `
     SELECT
       beneficios_otorgados.id,
-      beneficios_otorgados.tipo,
-      beneficios_otorgados.detalles,
+      beneficios_otorgados.tipo,      
+      beneficios_otorgados.direccion,
       beneficios_otorgados.seccional,
+      beneficios_otorgados.delegacion,
+      beneficios_otorgados.provincia,
       beneficios_otorgados.estado,
       beneficios_otorgados.usuario_otorgante,
       beneficios_otorgados.plazo,
       beneficios_otorgados.constancia_img,
+      beneficios_otorgados.fecha_envio,
+      beneficios_otorgados.fecha_entrega,
       kit_maternal.semanas,
       kit_maternal.fecha_de_parto,
       kit_maternal.cantidad,
@@ -1113,17 +1336,39 @@ export const comprobarBeneficioKitMaternal = (req, res) => {
   });
 };
 
+export const deleteBeneficio = (req, res) => {
+  const { beneficio_id } = req.params;
+
+  const query = `
+    DELETE FROM beneficios_otorgados
+    WHERE id = ?
+  `;
+  db.query(query, [beneficio_id], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "Error al eliminar el beneficio" });
+    }
+
+    return res.status(200).json({ message: "Beneficio eliminado" });
+  }
+  );
+};
+
+
+
 export const updateEstadoBeneficio = (req, res) => {
   const beneficioId = req.params.beneficio_id;
   const estado = req.body.estado;
+  const fechaEnvio = req.body.fecha_envio;
+  const fechaEntrega = req.body.fecha_entrega;
   
 
   const query = `
     UPDATE beneficios_otorgados
-    SET estado = ?
+    SET estado = ?, fecha_envio = IFNULL(?, fecha_envio), fecha_entrega = IFNULL(?, fecha_entrega)
     WHERE id = ?
   `;
-  db.query(query, [estado, beneficioId], (err, results) => {
+  db.query(query, [estado, fechaEnvio, fechaEntrega, beneficioId], (err, results) => {
     if (err) {
       console.log(err);
       return res.status(500).json({ error: "Error en el servidor" });
