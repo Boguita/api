@@ -803,26 +803,23 @@ export const getKitMaternalExcelIds = (req, res) => {
     // Definir las columnas en el archivo Excel con estilo
     const headerRow = worksheet.addRow([
       "ID",
-      "Tipo",
-      "Detalles",
-      "Estado",
-      "Provincia",
-      "Delegación",
-      "Seccional",
-      "Dirección",
-      "Semanas Gest.",
-      "Fecha de Parto",
-      "Cantidad Hijos",
-      "Fecha de Otorgamiento",
-      "Certificado",
-      "Afiliado ID",
+      "Tipo",      
       "Afiliado",
-      "DNI Afiliado",
-      "Familiar ID",
+      "DNI Afiliado",      
       "Nombre del Familiar",
       "DNI del Familiar",
       "Teléfono del Familiar",
       "Categoría del Familiar",
+      "Semanas Gest.",
+      "Fecha de Parto",
+      "Cantidad Hijos",
+      "Certificado",
+      "Provincia",
+      "Delegación",
+      "Seccional",
+      "Dirección Seccional",
+      "Fecha de Solicitud",
+      "Estado",
     ]);
 
     // Aplicar estilo a la fila de encabezado
@@ -854,13 +851,17 @@ export const getKitMaternalExcelIds = (req, res) => {
         index === 5 ||
         index === 6 ||
         index === 7 ||
+        index === 8 ||
         index === 9 ||
         index === 10 ||
         index === 11 ||
         index === 12 ||
         index === 13 ||
         index === 14 ||
-        index === 15
+        index === 15 ||
+        index === 16 ||
+        index === 17 ||
+        index === 18
       ) {
         // Cambia 0 y 2 a los índices de las columnas que deseas ajustar
         worksheet.getColumn(index + 1).width = 20; // Cambia 20 al ancho deseado
@@ -872,25 +873,22 @@ export const getKitMaternalExcelIds = (req, res) => {
       worksheet.addRow([
         row.id,
         row.tipo,
-        row.detalles,
-        row.estado,
-        row.provincia,
-        row.delegacion,
-        row.seccional,
-        row.direccion,
-        row.semanas,
-        row.fecha_de_parto,
-        row.cantidad,
-        row.fecha_otorgamiento,
-        "https://back.beneficiosuatre.com.ar/" + row.certificado,
-        row.afiliado_id,
         row.afiliado_name,
         row.afiliado_dni,
-        row.familiar_id,
         row.familiar_name,
         row.familiar_dni,
         row.familiar_tel,
         row.familiar_categoria,
+        row.semanas,
+        row.fecha_de_parto,
+        row.cantidad,
+        "https://back.beneficiosuatre.com.ar/" + row.certificado,
+        row.provincia,
+        row.delegacion,
+        row.seccional,
+        row.direccion,
+        row.fecha_otorgamiento,
+        row.estado,
       ]);
     });
 
