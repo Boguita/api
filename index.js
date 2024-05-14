@@ -14,7 +14,7 @@ const app = express();
 const port = process.env.PORT || 8801;
 
 const corsOptions = {
-  origin: [`https://client-boguita.vercel.app`],
+  origin: [`https://client-boguitas-projects.vercel.app`],
   methods: "GET,HEAD,PUT,OPTIONS,POST,DELETE",
   allowedHeaders: [
     "Access-Control-Allow-Headers",
@@ -69,30 +69,28 @@ app.use((req, res, next) => {
 app.options(
   "/api/auth/*",
   cors({
-    origin: [
-      "https://client-boguita.vercel.app"
-    ],
+    origin: ["https://client-boguitas-projects.vercel.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/users/*",
   cors({
-    origin: ["https://client-boguita.vercel.app"],
+    origin: ["https://client-boguitas-projects.vercel.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/tasks/*",
   cors({
-    origin: ["https://client-boguita.vercel.app"],
+    origin: ["https://client-boguitas-projects.vercel.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/uploads/*",
   cors({
-    origin: ["https://client-boguita.vercel.app"],
+    origin: ["https://client-boguitas-projects.vercel.app"],
     credentials: true,
   })
 );
