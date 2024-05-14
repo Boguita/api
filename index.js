@@ -14,11 +14,7 @@ const app = express();
 const port = process.env.PORT || 8801;
 
 const corsOptions = {
-  origin: [
-    `https://uatrebeneficios.galgoproductora.com`,
-    `https://beneficiosuatre.com.ar`,
-
-  ],
+  origin: [`https://client-boguita.vercel.app`],
   methods: "GET,HEAD,PUT,OPTIONS,POST,DELETE",
   allowedHeaders: [
     "Access-Control-Allow-Headers",
@@ -74,8 +70,7 @@ app.options(
   "/api/auth/*",
   cors({
     origin: [
-      "https://uatrebeneficios.galgoproductora.com",
-      `https://beneficiosuatre.com.ar`,
+      "https://client-boguita.vercel.app"
     ],
     credentials: true,
   })
@@ -83,30 +78,21 @@ app.options(
 app.options(
   "/api/users/*",
   cors({
-    origin: [
-      "https://uatrebeneficios.galgoproductora.com",
-      `https://beneficiosuatre.com.ar`,
-    ],
+    origin: ["https://client-boguita.vercel.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/tasks/*",
   cors({
-    origin: [
-      "https://uatrebeneficios.galgoproductora.com",
-      `https://beneficiosuatre.com.ar`,
-    ],
+    origin: ["https://client-boguita.vercel.app"],
     credentials: true,
   })
 );
 app.options(
   "/api/uploads/*",
   cors({
-    origin: [
-      "https://uatrebeneficios.galgoproductora.com",
-      `https://beneficiosuatre.com.ar`,
-    ],
+    origin: ["https://client-boguita.vercel.app"],
     credentials: true,
   })
 );
