@@ -115,44 +115,57 @@ const seccionalQuery =
 // }
 
 export const login = (req, res) => {
-   if(!req.body.email, !req.body.password) {
+  if (!req.body.email || !req.body.password) {
     return res.status(409).json("Completa todos los campos requeridos.");
   } else {
-  //CHECK USER
+    //CHECK USER
+    const q = "SELECT * FROM users WHERE email = ?";
+    db.query(q, [req.body.email], (err, data) => {
+      if (err) {
+        console.error("Error al consultar la base de datos:", err);
+        return res.status(500).json("Ocurrió un error al iniciar sesión.");
+      }
 
-  const q = "SELECT * FROM users WHERE email = ?";
+      if (data.length === 0) {
+        return res
+          .status(404)
+          .json("El usuario y/o la contraseña son incorrectos.");
+      }
 
-  db.query(q, [req.body.email], (err, data) => {
-    if (err) return res.status(500).json(err);
-    if (data.length === 0) return res.status(404).json("El usuario y/o la contraseña son incorrectos");
+      //Check password
+      const isPasswordCorrect = bcrypt.compareSync(
+        req.body.password,
+        data[0].password
+      );
+      if (!isPasswordCorrect) {
+        return res
+          .status(400)
+          .json("El usuario y/o la contraseña son incorrectos.");
+      }
 
-    //Check password
-    const isPasswordCorrect = bcrypt.compareSync(
-      req.body.password,
-      data[0].password
-    );
+      if (data[0].status === "Pendiente" || data[0].status === "Rechazado") {
+        return res
+          .status(401)
+          .json("Tu cuenta aún no se encuentra habilitada.");
+      }
 
-    if (!isPasswordCorrect)
-      return res.status(400).json("El usuario y/o la contraseña son incorrectos");
-
-    if (data[0].status === "Pendiente" || data[0].status === "Rechazado")
-      return res.status(401).json("Tu cuenta aún no se encuentra habilitada.");
-
-    const token = jwt.sign({ id: data[0].id }, "jwtkey");
-    const { password, ...other } = data[0];
-    
-    
-    res
-      .cookie("access_token", token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-      })
-      .status(200)
-      .json(other);
-        
-  });
-};
+      try {
+        const token = jwt.sign({ id: data[0].id }, "jwtkey");
+        const { password, ...other } = data[0];
+        res
+          .cookie("access_token", token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+          })
+          .status(200)
+          .json(other);
+      } catch (error) {
+        console.error("Error al generar el token JWT:", error);
+        return res.status(500).json("Ocurrió un error al iniciar sesión.");
+      }
+    });
+  }
 };
 
 
